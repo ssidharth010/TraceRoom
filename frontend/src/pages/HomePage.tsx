@@ -5,19 +5,17 @@ import {
   Flask,
   LockKey,
   Pulse,
-  ShieldCheck,
   WarningDiamond,
   XCircle,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { configuredSnapshots } from "../../../src/config/snapshots";
-import { loadDemoReadiness } from "../api";
 import { AgentCanvas } from "../components/AgentCanvas";
 import { formatScenario, OutcomeBadge } from "../components/SessionUI";
 import { useTraceRoom } from "../TraceRoomContext";
-import type { DemoReadiness, SessionScenario } from "../types";
+import type { SessionScenario } from "../types";
 
 const canonicalSnapshot = configuredSnapshots[0];
 
@@ -29,20 +27,20 @@ const labScenarios: Array<{
 }> = [
   {
     scenario: "risk-veto",
-    label: "Risk veto",
-    detail: "Exercise the deterministic policy boundary",
+    label: "Risk policy",
+    detail: "Verify that an unsafe decision is vetoed",
     icon: LockKey,
   },
   {
     scenario: "error",
-    label: "Workflow error",
-    detail: "Record an uncontrolled stage failure",
+    label: "Workflow recovery",
+    detail: "Verify that an unexpected stage failure is recorded",
     icon: XCircle,
   },
   {
     scenario: "deadlock",
-    label: "Agent deadlock",
-    detail: "Force a split with no majority",
+    label: "Consensus control",
+    detail: "Verify that a split decision cannot execute",
     icon: ClockCounterClockwise,
   },
 ];
@@ -50,16 +48,26 @@ const labScenarios: Array<{
 export function HomePage() {
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const { sessions, loadingScenario, runScenario, selectSession, booting } =
+  const { sessions, loadingScenario, runScenario, selectSession } =
     useTraceRoom();
-  const [readiness, setReadiness] = useState<DemoReadiness | null>(null);
-  const [readinessError, setReadinessError] = useState(false);
   const [labOpen, setLabOpen] = useState(false);
   const [labSnapshotId, setLabSnapshotId] = useState(
     canonicalSnapshot?.snapshotId ?? "",
   );
 
   const latest = sessions[0] ?? null;
+  const decisionStats = useMemo(
+    () => ({
+      total: sessions.length,
+      approved: sessions.filter((session) => session.outcome === "APPROVED")
+        .length,
+      blocked: sessions.filter((session) =>
+        ["EVIDENCE_BLOCKED", "VETOED", "DEADLOCKED"].includes(session.outcome),
+      ).length,
+      failed: sessions.filter((session) => session.outcome === "ERROR").length,
+    }),
+    [sessions],
+  );
   const labSnapshot = useMemo(
     () =>
       configuredSnapshots.find(
@@ -67,23 +75,6 @@ export function HomePage() {
       ) ?? canonicalSnapshot,
     [labSnapshotId],
   );
-
-  useEffect(() => {
-    let active = true;
-    void loadDemoReadiness()
-      .then((result) => {
-        if (active) {
-          setReadiness(result);
-          setReadinessError(false);
-        }
-      })
-      .catch(() => {
-        if (active) setReadinessError(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   async function run(
     scenario: SessionScenario,
@@ -102,205 +93,113 @@ export function HomePage() {
     navigate("/incidents");
   }
 
-  const readinessItems = readiness
-    ? [
-        ["API", readiness.api],
-        ["LLM", readiness.llm],
-        ["SIGNOZ UI", readiness.signozUi],
-        ["SIGNOZ MCP", readiness.signozMcp],
-        ["DASHBOARD", readiness.dashboard],
-        ["ALERTS", readiness.alerts],
-        ["INFY FIXTURE", readiness.canonicalFixture],
-      ]
-    : [];
-
   return (
-    <div className="page command-page judge-mode">
-      <header className="judge-hero">
+    <div className="page command-page product-command">
+      <header className="command-hero">
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <span className="eyebrow">DECISION EVIDENCE FIREWALL</span>
-          <h1>Watch one false claim stop an autonomous decision.</h1>
+          <span className="eyebrow">BLACK BOX FOR FINANCIAL AGENTS</span>
+          <h1>Record every agent decision. Block unsafe execution.</h1>
           <p>
-            TraceRoom blocks corrupted INFY evidence, then SigNoz proves where
-            the agent workflow stopped.
+            TraceRoom captures agent reasoning, validates market evidence,
+            enforces risk policy, and proves every outcome through SigNoz.
           </p>
-          <div className="judge-actions">
+          <div className="command-actions">
             <button
-              className="breach-button"
+              className="run-button"
               disabled={loadingScenario !== null || !canonicalSnapshot}
-              onClick={() => void run("evidence-fault")}
+              onClick={() => void run("healthy")}
             >
-              {loadingScenario === "evidence-fault" ? (
+              {loadingScenario === "healthy" ? (
                 <Pulse className="spin" />
               ) : (
-                <WarningDiamond weight="fill" />
+                <CheckCircle weight="fill" />
               )}
               <span>
-                <strong>RUN THE EVIDENCE BREACH</strong>
-                <small>INFY / 8.00% controlled corruption</small>
+                <strong>RUN AGENT SESSION</strong>
+                <small>INFY monitored workflow</small>
               </span>
               <ArrowRight />
             </button>
             <button
-              className="healthy-compare-button"
+              className="control-test-button"
               disabled={loadingScenario !== null || !canonicalSnapshot}
-              onClick={() => void run("healthy")}
+              onClick={() => void run("evidence-fault")}
             >
-              <CheckCircle weight="fill" />
-              COMPARE HEALTHY RUN
+              <WarningDiamond weight="fill" />
+              SIMULATE EVIDENCE BREACH
             </button>
           </div>
         </motion.div>
-
         <motion.aside
-          className="readiness-terminal"
-          initial={reduce ? false : { opacity: 0, x: 24 }}
+          className="decision-system-map"
+          initial={reduce ? false : { opacity: 0, x: 18 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, delay: 0.08 }}
-          aria-live="polite"
+          transition={{ duration: 0.5, delay: 0.08 }}
+          aria-label="TraceRoom decision control path"
         >
           <header>
-            <div>
-              <ShieldCheck weight="duotone" />
-              <span>DEMO READINESS</span>
-            </div>
-            <strong
-              className={
-                readiness?.ready ? "readiness-ready" : "readiness-attention"
-              }
-            >
-              {booting || (!readiness && !readinessError)
-                ? "CHECKING"
-                : readiness?.ready
-                  ? "ALL SYSTEMS READY"
-                  : "ATTENTION REQUIRED"}
-            </strong>
+            <span>DECISION CONTROL PATH</span>
+            <strong>ACTIVE</strong>
           </header>
-          {readinessError ? (
-            <p className="readiness-error">
-              Readiness endpoint unavailable. Restart the TraceRoom API.
-            </p>
-          ) : (
-            <div className="readiness-grid">
-              {readinessItems.map(([label, status], index) => (
-                <motion.div
-                  key={label}
-                  initial={reduce ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.12 + index * 0.035 }}
-                >
-                  <span>{label}</span>
-                  <strong
-                    className={
-                      status === "READY" || status === "VERIFIED"
-                        ? "status-ok"
-                        : "status-missing"
-                    }
-                  >
-                    {status}
-                  </strong>
-                </motion.div>
-              ))}
-              {!readiness && !readinessError && (
-                <div className="readiness-skeleton" aria-hidden="true" />
-              )}
-            </div>
-          )}
+          <div className="system-map-intro">
+            <strong>
+              A decision cannot reach execution until every control passes.
+            </strong>
+          </div>
+          <div className="system-map-stages">
+            {[
+              ["Agents deliberate", "RECORDED"],
+              ["Evidence is validated", "ENFORCED"],
+              ["Risk policy is reviewed", "ENFORCED"],
+              ["Execution is gated", "CONTROLLED"],
+            ].map(([label, status], index) => (
+              <motion.div
+                key={label}
+                initial={reduce ? false : { opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 + index * 0.08 }}
+              >
+                <span>
+                  <CheckCircle weight="fill" />
+                  {label}
+                </span>
+                <strong>{status}</strong>
+              </motion.div>
+            ))}
+          </div>
+          <footer>
+            Spans, logs, metrics, and proof remain bound to one session.
+          </footer>
         </motion.aside>
       </header>
 
-      <section className="canonical-frame" aria-label="Canonical demo contract">
+      <dl className="decision-stats" aria-label="Recorded session totals">
         <div>
-          <span>AUTHORITATIVE</span>
-          <strong>1684.50</strong>
-        </div>
-        <div className="canonical-transfer">
-          <span>CONTROLLED FAULT</span>
-          <strong>+8.00%</strong>
-          <ArrowRight />
+          <dt>Recorded sessions</dt>
+          <dd>{decisionStats.total}</dd>
         </div>
         <div>
-          <span>AGENT CITATION</span>
-          <strong>1819.26</strong>
+          <dt>Approved</dt>
+          <dd>{decisionStats.approved}</dd>
         </div>
-        <div className="canonical-gate">
-          <span>MAX TOLERANCE</span>
-          <strong>2.00%</strong>
-          <small>EVIDENCE_INTEGRITY closes the gate</small>
+        <div>
+          <dt>Blocked by controls</dt>
+          <dd>{decisionStats.blocked}</dd>
         </div>
-      </section>
-
-      <section className="scenario-lab">
-        <button
-          className="scenario-lab-toggle"
-          onClick={() => setLabOpen((open) => !open)}
-          aria-expanded={labOpen}
-        >
-          <Flask />
-          <span>
-            <strong>OPEN SCENARIO LAB</strong>
-            <small>Secondary fixtures and controlled failure modes</small>
-          </span>
-          <ArrowRight className={labOpen ? "rotate-down" : ""} />
-        </button>
-        <AnimatePresence initial={false}>
-          {labOpen && (
-            <motion.div
-              className="scenario-lab-panel"
-              initial={reduce ? false : { opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <label htmlFor="lab-snapshot">REPLAY FIXTURE</label>
-              <select
-                id="lab-snapshot"
-                value={labSnapshotId}
-                onChange={(event) => setLabSnapshotId(event.target.value)}
-                disabled={loadingScenario !== null}
-              >
-                {configuredSnapshots.map((snapshot) => (
-                  <option value={snapshot.snapshotId} key={snapshot.snapshotId}>
-                    {snapshot.symbol} / {snapshot.snapshotId}
-                  </option>
-                ))}
-              </select>
-              <div className="lab-action-grid">
-                {labScenarios.map(
-                  ({ scenario, label, detail, icon: Icon }) => (
-                    <button
-                      key={scenario}
-                      disabled={loadingScenario !== null || !labSnapshot}
-                      onClick={() =>
-                        void run(
-                          scenario,
-                          labSnapshot?.snapshotId,
-                          labSnapshot?.symbol,
-                        )
-                      }
-                    >
-                      <Icon />
-                      <span>
-                        <strong>{label}</strong>
-                        <small>{detail}</small>
-                      </span>
-                      <ArrowRight />
-                    </button>
-                  ),
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
+        <div>
+          <dt>Workflow failures</dt>
+          <dd>{decisionStats.failed}</dd>
+        </div>
+      </dl>
 
       <section className="latest-decision" aria-labelledby="latest-heading">
         <header>
           <div>
-            <span className="eyebrow">LATEST RECORDED DECISION</span>
+            <span className="eyebrow">LATEST DECISION</span>
             <h2 id="latest-heading">
               {latest
                 ? `${latest.snapshot.symbol} / ${formatScenario(latest.scenario)}`
@@ -338,7 +237,7 @@ export function HomePage() {
                 </div>
               </dl>
               <span>
-                OPEN INCIDENT <ArrowRight />
+                VIEW DECISION <ArrowRight />
               </span>
             </button>
             <div className="latest-network">
@@ -347,9 +246,73 @@ export function HomePage() {
           </div>
         ) : (
           <p className="latest-empty">
-            Run the evidence breach to create the canonical decision record.
+            Start a monitored run to create the first decision record.
           </p>
         )}
+      </section>
+
+      <section className="scenario-lab control-tests">
+        <button
+          className="scenario-lab-toggle"
+          onClick={() => setLabOpen((open) => !open)}
+          aria-expanded={labOpen}
+        >
+          <Flask />
+          <span>
+            <strong>CONTROL TESTS</strong>
+            <small>Safely verify policy enforcement and failure handling</small>
+          </span>
+          <ArrowRight className={labOpen ? "rotate-down" : ""} />
+        </button>
+        <AnimatePresence initial={false}>
+          {labOpen && (
+            <motion.div
+              className="scenario-lab-panel"
+              initial={reduce ? false : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <label htmlFor="lab-snapshot">MARKET SNAPSHOT</label>
+              <select
+                id="lab-snapshot"
+                value={labSnapshotId}
+                onChange={(event) => setLabSnapshotId(event.target.value)}
+                disabled={loadingScenario !== null}
+              >
+                {configuredSnapshots.map((snapshot) => (
+                  <option value={snapshot.snapshotId} key={snapshot.snapshotId}>
+                    {snapshot.symbol} /{" "}
+                    {new Date(snapshot.observedAt).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+              <div className="lab-action-grid">
+                {labScenarios.map(
+                  ({ scenario, label, detail, icon: Icon }) => (
+                    <button
+                      key={scenario}
+                      disabled={loadingScenario !== null || !labSnapshot}
+                      onClick={() =>
+                        void run(
+                          scenario,
+                          labSnapshot?.snapshotId,
+                          labSnapshot?.symbol,
+                        )
+                      }
+                    >
+                      <Icon />
+                      <span>
+                        <strong>{label}</strong>
+                        <small>{detail}</small>
+                      </span>
+                      <ArrowRight />
+                    </button>
+                  ),
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
     </div>
   );

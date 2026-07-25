@@ -81,7 +81,7 @@ export function EvidencePage() {
         <Fingerprint />
         <h1>Select evidence to investigate.</h1>
         <p>
-          Choose a recorded incident first. Auditor questions and downloaded
+          Choose a recorded decision first. Auditor questions and downloaded
           evidence remain bound to that exact session.
         </p>
         <Link className="primary-button" to="/incidents">
@@ -123,10 +123,9 @@ export function EvidencePage() {
           </div>
           <h2>Ask the Auditor</h2>
           <p>
-            Natural-language investigation grounded in the selected decision
-            trace. MCP connectivity is checked when a question runs; an
-            unavailable key or service returns an explicitly labeled persisted
-            session fallback.
+            Ask questions about the selected decision trace. Every answer shows
+            whether it was verified live through SigNoz or reconstructed from
+            the recorded session.
           </p>
         </div>
         <div className="auditor-form">

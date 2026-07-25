@@ -38,8 +38,8 @@ export function IncidentsPage() {
     <div className="page incidents-page">
       <header className="page-heading incident-index-heading">
         <div>
-          <span className="eyebrow">RECORDED DECISIONS</span>
-          <h1>Every incident keeps its proof.</h1>
+          <span className="eyebrow">DECISION LOG</span>
+          <h1>Every decision keeps its proof.</h1>
           <p>
             Select a session to inspect its replay, agent decisions, debate,
             controls, and matching SigNoz telemetry.
@@ -74,7 +74,7 @@ export function IncidentsPage() {
           ))}
           {sessions.length === 0 && (
             <p className="rail-empty">
-              No sessions yet. Start from Command and run a replay.
+              No decisions yet. Start a monitored run from Overview.
             </p>
           )}
         </aside>

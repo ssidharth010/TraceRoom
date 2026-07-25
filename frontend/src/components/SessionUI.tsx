@@ -49,7 +49,7 @@ export function ControlledInjectionCard({
   return (
     <section className="fault-injection-card" aria-label="Controlled injection">
       <header>
-        <span><Lightning weight="fill" /> CONTROLLED FAULT INJECTION</span>
+        <span><Lightning weight="fill" /> SIMULATION DETAILS</span>
         <strong>{formatScenario(injection.type)}</strong>
       </header>
       <p>{injection.description}</p>

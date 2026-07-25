@@ -145,9 +145,9 @@ export function DecisionVerdict({ session }: { session: RecordedSession }) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.12 }}
         >
-          <span>CORRUPTED CITATION</span>
+          <span>REPORTED PRICE</span>
           <strong>{cited}</strong>
-          <small>Controlled evidence injection</small>
+          <small>Rejected by evidence validation</small>
         </motion.div>
         <motion.div
           className="verdict-threshold"

@@ -178,10 +178,10 @@ export function RoomPage() {
       <div className="page room-empty">
         <AgentCanvas session={null} />
         <div className="room-empty-copy">
-          <h1>Select an incident first.</h1>
+          <h1>Select a recorded decision.</h1>
           <p>
-            Agent Room never replays a global default. Bind it to a specific
-            recorded decision from Incidents.
+            Choose a decision from the log to inspect its agent conversation
+            and stage-by-stage replay.
           </p>
           <button
             className="primary-button"
@@ -199,11 +199,11 @@ export function RoomPage() {
     <div className="page room-page">
       <header className="page-heading room-heading">
         <div>
-          <span className="eyebrow">SESSION-BOUND AGENT ROOM</span>
+          <span className="eyebrow">DECISION REPLAY</span>
           <h1>{selected.snapshot.symbol} decision network</h1>
         </div>
         <div className="room-session-binding">
-          <label htmlFor="room-session">BOUND SESSION</label>
+          <label htmlFor="room-session">RECORDED DECISION</label>
           <select
             id="room-session"
             value={selected.sessionId}
@@ -216,7 +216,7 @@ export function RoomPage() {
           >
             {sessions.map((session) => (
               <option value={session.sessionId} key={session.sessionId}>
-                {session.snapshot.symbol} / {session.scenario} /{" "}
+                {session.snapshot.symbol} / {session.outcome} /{" "}
                 {session.sessionId.slice(0, 8)}
               </option>
             ))}

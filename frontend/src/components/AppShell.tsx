@@ -14,7 +14,6 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTraceRoom } from "../TraceRoomContext";
-import { formatScenario } from "./SessionUI";
 
 const navItems = [
   { to: "/", label: "Command", icon: Command },
@@ -44,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-frame">
       <header className="topbar">
-        <NavLink className="brand" to="/" aria-label="TraceRoom command center">
+        <NavLink className="brand" to="/" aria-label="TraceRoom overview">
           <span className="brand-mark">
             <Binary weight="bold" />
           </span>
@@ -128,14 +127,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div>
               <strong>
-                {formatScenario(lastCompletedRun.scenario)} run complete
+                {lastCompletedRun.snapshot.symbol} decision recorded
               </strong>
               <span>
                 {lastCompletedRun.snapshot.symbol} recorded as{" "}
                 {lastCompletedRun.outcome}.
               </span>
             </div>
-            <button onClick={openCompletedIncident}>OPEN INCIDENT</button>
+            <button onClick={openCompletedIncident}>VIEW DECISION</button>
             <button
               className="run-complete-dismiss"
               onClick={dismissCompletedRun}
