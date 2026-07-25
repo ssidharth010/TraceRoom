@@ -2,47 +2,42 @@
 
 ## Final Submission Flow
 
-1. Open the TraceRoom Command page and frame it as a circuit breaker, not a
-   trading app.
-2. Click **Run the Breach**.
-3. In the live Agent Room, show Momentum, Mean Reversion, and Skeptic
-   transmitting while the evidence gate holds execution.
-4. When the persisted replay replaces the live state, show `1819.26` against
-   the authoritative `1684.50`, the `8.00%` deviation, and the `2.00%` limit.
-5. Show `EVIDENCE_INTEGRITY` and `EXECUTION BLOCKED`.
-6. Open Evidence, ask why TraceRoom stopped INFY, and download the proof receipt.
-7. Open SigNoz from the trace link and walk through snapshot, proposal/LLM,
-   evidence, rebuttal/LLM, final-vote/LLM, consensus, and risk spans.
-8. Return to the Incident Lab and compare the five controlled replays:
-   - **Healthy** shows the complete allowed path.
-   - **Evidence Fault** shifts one generated evidence value by 8%; show the
-     inline injection, failed evidence chip, `EVIDENCE_INTEGRITY` gate, skipped
-     transcript stages, and the shorter 11-span trace. Point out that no
-     rebuttal, final-vote, consensus, risk-review, or evaluation spans exist
-     because the gate stopped the pipeline.
-   - **Risk Veto** transparently normalizes the final room to `LONG`; show
-     the inline generated-to-recorded vote mapping, tightened risk-policy
-     injection, and `MAX_PRICE_MOVE` blocking the decision.
-   - **Deadlock** transparently normalizes the final votes to `LONG`, `SHORT`,
-     and `NO_TRADE`; show the inline vote injection, 1/1/1 split, missing
-     majority, and `CONSENSUS_REQUIRED`.
-   - **Error Session** injects a controlled post-stage recording error; show
-     the readable error in TraceRoom and the error spans in SigNoz.
-9. Open Snapshot Forge and enter a second supported stock. Show Twelve Data
-   supplying the numeric snapshot while OpenAI web search supplies cited
-   contextual research on a separate trust rail.
-10. Select several fields to show their provenance, copy or download the JSON,
-    then click **Lock and Release Agents**.
-11. Watch the selected symbol enter the live Agent Room. Explain that custom
-    stocks skip historical evaluation unless a matching fixture exists.
-12. Close with: "TraceRoom can onboard new decisions without weakening its
-    evidence boundary."
+1. Open **Command** and frame TraceRoom as the audit and governance layer around
+   an autonomous financial-agent workload.
+2. Leave the configured picker on ACME or choose another fixture, then run
+   **Healthy**. While the request is active, point out the honest “agents
+   debating” state.
+3. Open the newest incident. Show the `APPROVED` outcome, session-bound replay,
+   real agent proposals, and any genuine Initial → Final vote changes.
+4. Expand **View Full Debate Transcript** and scroll through the snapshot,
+   sealed proposals, evidence chips, cross-examination, final votes, consensus,
+   and deterministic risk verdict.
+5. Open the matching SigNoz trace from Investigate and show the 27-span
+   `debate.session` structure.
+6. Return to Command and run **Evidence Fault**. In its incident, show the
+   controlled injection card, `112.86` cited against authoritative `104.50`,
+   the `8.00%` deviation, `EVIDENCE_INTEGRITY`, and every downstream stage
+   explicitly marked skipped.
+7. Compare the remaining controlled scenarios:
+   - **Risk Veto:** generated-to-forced vote table, risk-policy threshold
+     override, and `MAX_PRICE_MOVE`.
+   - **Deadlock:** generated-to-forced votes, 1/1/1 split, and
+     `CONSENSUS_REQUIRED`.
+   - **Error:** controlled post-stage error disclosure, readable error card, and
+     the error trace.
+8. Open **Agent Room** from one incident and explain that its cinematic replay
+   is bound to that exact session rather than a global latest result.
+9. Open **Evidence**, select the same incident, ask why it stopped or passed,
+   and show the result labeled either SigNoz MCP verified or persisted-session
+   fallback. Open the per-incident trace and dashboard links.
+10. Close with: “TraceRoom does not promise autonomous financial agents will
+    always be right. It makes sure they can never be opaque.”
 
-Every scenario starts with the real INFY proposal LLM stage. The evidence-fault
-scenario stops there when validation fails; the other scenarios continue
-through the real rebuttal and final-vote LLM stages. Controlled changes are
-explicitly labeled in the replay and telemetry. Live and paper trading are not
-part of the current demo path.
+Every scenario starts with a real configured-snapshot proposal stage. The
+evidence-fault scenario stops after deterministic validation fails; the other
+scenarios continue through real rebuttal and final-vote LLM stages. Controlled
+changes are explicitly labeled in the UI and telemetry. Live and paper trading
+are not part of the demo.
 
 Use this line when introducing the deadlock:
 

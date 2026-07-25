@@ -5,7 +5,6 @@ import { EvidencePage } from "./pages/EvidencePage";
 import { HomePage } from "./pages/HomePage";
 import { IncidentsPage } from "./pages/IncidentsPage";
 import { RoomPage } from "./pages/RoomPage";
-import { ForgePage } from "./pages/ForgePage";
 
 export function App() {
   const location = useLocation();
@@ -24,7 +23,6 @@ export function App() {
           <Routes location={location}>
             <Route path="/" element={<HomePage />} />
             <Route path="/room" element={<RoomPage />} />
-            <Route path="/forge" element={<ForgePage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
             <Route path="/evidence" element={<EvidencePage />} />
             <Route path="*" element={<HomePage />} />

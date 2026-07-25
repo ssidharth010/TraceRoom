@@ -8,25 +8,34 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { askAuditor } from "../api";
 import { useTraceRoom } from "../TraceRoomContext";
 import type { TelemetryQuestionAnswer } from "../types";
 
-const questions = [
-  "Why did TraceRoom stop INFY?",
-  "Which span failed?",
-  "Show the session logs",
-  "Were any alerts firing?",
-];
-
 export function EvidencePage() {
   const { selected } = useTraceRoom();
   const reduce = useReducedMotion();
-  const [question, setQuestion] = useState(questions[0]);
+  const questions = useMemo(
+    () => [
+      `Why did TraceRoom ${selected?.execution.status === "BLOCKED" ? "stop" : "approve"} ${selected?.snapshot.symbol ?? "this session"}?`,
+      "Which span failed?",
+      "Show the session logs",
+      "Were any alerts firing?",
+    ],
+    [selected],
+  );
+  const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<TelemetryQuestionAnswer | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuestion(questions[0]);
+    setAnswer(null);
+    setError(null);
+  }, [questions]);
 
   async function submitQuestion() {
     if (!selected || !question.trim() || loading) return;
@@ -35,7 +44,9 @@ export function EvidencePage() {
     try {
       setAnswer(await askAuditor(selected.sessionId, question.trim()));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Auditor search failed.");
+      setError(
+        caught instanceof Error ? caught.message : "Auditor search failed.",
+      );
     } finally {
       setLoading(false);
     }
@@ -71,7 +82,9 @@ export function EvidencePage() {
       },
     };
     const url = URL.createObjectURL(
-      new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" }),
+      new Blob([JSON.stringify(receipt, null, 2)], {
+        type: "application/json",
+      }),
     );
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -84,8 +97,14 @@ export function EvidencePage() {
     return (
       <div className="page evidence-empty">
         <Fingerprint />
-        <h1>No evidence recorded.</h1>
-        <p>Run an incident first, then return to reconstruct it from SigNoz.</p>
+        <h1>Select evidence to investigate.</h1>
+        <p>
+          Choose a recorded incident first. Auditor questions and downloaded
+          evidence remain bound to that exact session.
+        </p>
+        <Link className="primary-button" to="/incidents">
+          OPEN INCIDENTS
+        </Link>
       </div>
     );
   }
@@ -98,20 +117,35 @@ export function EvidencePage() {
           <h1>Do not trust the summary. Inspect the proof.</h1>
         </div>
         <div className="evidence-actions">
-          <button className="secondary-button" onClick={() => void downloadReceipt()}>
+          <button
+            className="secondary-button"
+            onClick={() => void downloadReceipt()}
+          >
             <DownloadSimple /> DOWNLOAD RECEIPT
           </button>
-          <a className="primary-button" href={selected.signoz.traceUrl} target="_blank" rel="noreferrer">
-            OPEN SIGNOZ <ArrowSquareOut />
+          <a
+            className="secondary-button"
+            href={selected.signoz.dashboardUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            OPEN DASHBOARD <ArrowSquareOut />
           </a>
         </div>
       </header>
 
       <section className="auditor-console">
         <div className="auditor-intro">
-          <div className="auditor-icon"><ShieldCheck weight="duotone" /></div>
+          <div className="auditor-icon">
+            <ShieldCheck weight="duotone" />
+          </div>
           <h2>Ask the Auditor</h2>
-          <p>Natural-language investigation grounded in the selected decision trace.</p>
+          <p>
+            Natural-language investigation grounded in the selected decision
+            trace. MCP connectivity is checked when a question runs; an
+            unavailable key or service returns an explicitly labeled persisted
+            session fallback.
+          </p>
         </div>
         <div className="auditor-form">
           <label htmlFor="auditor-question">Question</label>
@@ -125,16 +159,31 @@ export function EvidencePage() {
                 if (event.key === "Enter") void submitQuestion();
               }}
             />
-            <button className="send-button" onClick={() => void submitQuestion()} disabled={loading || !question.trim()} aria-label="Ask the Auditor">
-              {loading ? <Pulse className="spin" /> : <PaperPlaneTilt weight="fill" />}
+            <button
+              className="send-button"
+              onClick={() => void submitQuestion()}
+              disabled={loading || !question.trim()}
+              aria-label="Ask the Auditor"
+            >
+              {loading ? (
+                <Pulse className="spin" />
+              ) : (
+                <PaperPlaneTilt weight="fill" />
+              )}
             </button>
           </div>
           <div className="question-list">
             {questions.map((item) => (
-              <button key={item} onClick={() => setQuestion(item)}>{item}</button>
+              <button key={item} onClick={() => setQuestion(item)}>
+                {item}
+              </button>
             ))}
           </div>
-          {error && <p className="inline-error" role="alert">{error}</p>}
+          {error && (
+            <p className="inline-error" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       </section>
 
@@ -148,7 +197,12 @@ export function EvidencePage() {
             exit={{ opacity: 0 }}
           >
             <header>
-              <span><CheckCircle weight="fill" /> {answer.source === "signoz_mcp" ? "VERIFIED BY SIGNOZ MCP" : "DETERMINISTIC FALLBACK"}</span>
+              <span>
+                <CheckCircle weight="fill" />{" "}
+                {answer.source === "signoz_mcp"
+                  ? "VERIFIED BY SIGNOZ MCP"
+                  : "SIGNOZ MCP NOT CONFIGURED OR UNAVAILABLE — PERSISTED SESSION FALLBACK"}
+              </span>
               <small>TRACE {answer.traceId}</small>
             </header>
             <h2>{answer.answer}</h2>
@@ -164,7 +218,10 @@ export function EvidencePage() {
         ) : (
           <section className="auditor-standby">
             <Pulse />
-            <span>Auditor standing by for trace {selected.signoz.traceId.slice(0, 12)}</span>
+            <span>
+              Auditor ready to check MCP for trace{" "}
+              {selected.signoz.traceId.slice(0, 12)}
+            </span>
           </section>
         )}
       </AnimatePresence>

@@ -36,68 +36,21 @@ export interface MarketSnapshot {
   };
 }
 
-export type SnapshotExchange = "NSE" | "US";
-export type SnapshotStatus =
-  | "READY"
-  | "STALE"
-  | "BLOCKED"
-  | "FIXTURE_FALLBACK"
-  | "LOCKED";
-
-export interface SnapshotCandidate {
-  schemaVersion: 1;
-  candidateId: string;
-  status: SnapshotStatus;
-  createdAt: string;
-  lockedAt: string | null;
-  fallbackReason: string | null;
-  instrument: {
-    requestedSymbol: string;
-    symbol: string;
-    exchange: SnapshotExchange;
-    providerSymbol: string;
-    name: string | null;
-    currency: string | null;
-  };
-  snapshot: MarketSnapshot | null;
-  research: {
-    status: "READY" | "UNAVAILABLE";
-    summary: string;
-    catalysts: string[];
-    risks: string[];
-    responseId: string | null;
-    model: string | null;
-    note: string | null;
-  };
-  sources: Array<{
-    id: string;
-    kind: "MARKET_DATA" | "WEB";
-    provider: string;
-    title: string;
-    url: string;
-    observedAt: string | null;
-    fields: string[];
-  }>;
-  fieldProvenance: Record<string, string[]>;
-  checks: Array<{
-    id: string;
-    label: string;
-    status: "PASS" | "WARN" | "FAIL";
-    detail: string;
-  }>;
-  canLock: boolean;
-  canRun: boolean;
-}
-
 export interface RecordedSession {
   schemaVersion: 4;
   sessionId: string;
   createdAt: string;
+  durationMs?: number;
   mode: SessionScenario;
   scenario: SessionScenario;
   scenarioInjection: {
     injected: boolean;
-    type: string;
+    type:
+      | "none"
+      | "evidence-price-deviation"
+      | "directional-risk-veto"
+      | "workflow-recording-error"
+      | "deadlock";
     description: string;
     votesOverridden: boolean;
     voteOverrides: Array<{
@@ -112,6 +65,11 @@ export interface RecordedSession {
       originalValue: number;
       forcedValue: number;
     };
+    riskPolicyOverride?: {
+      ruleId: "MAX_PRICE_MOVE";
+      originalThreshold: number;
+      scenarioThreshold: number;
+    };
   };
   snapshot: MarketSnapshot;
   agents: Array<{
@@ -121,7 +79,16 @@ export interface RecordedSession {
     riskAppetite: string;
   }>;
   lifecycle: string[];
-  stageStatuses: Record<string, StageStatus>;
+  stageStatuses: {
+    marketSnapshot: StageStatus;
+    proposals: StageStatus;
+    evidenceValidation: StageStatus;
+    crossExamination: StageStatus;
+    finalVote: StageStatus;
+    consensus: StageStatus;
+    riskReview: StageStatus;
+    evaluation: StageStatus;
+  };
   pipelineGate: {
     status: "PASSED" | "BLOCKED";
     blockedAt: "EVIDENCE_VALIDATION" | null;
@@ -143,11 +110,14 @@ export interface RecordedSession {
   }>;
   rebuttals: Array<{
     agentId: string;
-    critiques?: Array<{
-      targetAgentId?: string;
-      critique?: string;
-      concern?: string;
+    snapshotId: string;
+    critiques: Array<{
+      targetAgentId: string;
+      strongestAgreement: string;
+      strongestObjection: string;
+      evidenceConflicts: string[];
     }>;
+    overallAssessment: string;
   }>;
   finalVotes: Array<{
     agentId: string;
@@ -201,7 +171,7 @@ export interface RecordedSession {
     status: "READY" | "BLOCKED";
     reason: string;
   };
-  outcome: string;
+  outcome: "APPROVED" | "EVIDENCE_BLOCKED" | "VETOED" | "DEADLOCKED" | "ERROR";
   error?: {
     code: string;
     stage: string;

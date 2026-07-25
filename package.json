@@ -7,9 +7,10 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names api,ui --prefix-colors cyan,magenta \"npm run api\" \"node scripts/wait-for-api.mjs && npm --prefix frontend run dev\"",
+    "dev": "concurrently --kill-others --names api,ui --prefix-colors cyan,magenta \"npm run api:dev\" \"node scripts/wait-for-api.mjs && npm --prefix frontend run dev\"",
     "run:once": "tsx src/index.ts",
     "api": "tsx src/api/server.ts",
+    "api:dev": "tsx watch --clear-screen=false src/api/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx src/session/testSession.ts && tsx src/market/testSnapshot.ts",
     "trace:test": "tsx src/telemetry/testTrace.ts"

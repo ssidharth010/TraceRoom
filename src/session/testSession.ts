@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
+import {
+  configuredSnapshots,
+  getConfiguredSnapshot,
+} from "../config/snapshots";
 import { resolveConsensus } from "../debate/resolveConsensus";
 import { validateEvidence } from "../evidence/validateEvidence";
 import { marketSnapshot } from "../fixtures/marketSnapshot";
@@ -18,6 +22,12 @@ import type { FinalVote } from "../schemas/finalVote";
 import type { AgentProposal } from "../schemas/proposal";
 import type { RecordedSession } from "./types";
 
+assert.equal(configuredSnapshots.length, 4);
+assert.equal(configuredSnapshots[0]?.snapshotId, "snapshot-001");
+assert.equal(configuredSnapshots[0]?.symbol, "ACME");
+assert.equal(getConfiguredSnapshot("snapshot-003")?.symbol, "ORBT");
+assert.equal(getConfiguredSnapshot("missing-snapshot"), null);
+
 const proposals: AgentProposal[] = ["agent-1", "agent-2", "agent-3"].map(
   (agentId) => ({
     agentId,
@@ -25,13 +35,13 @@ const proposals: AgentProposal[] = ["agent-1", "agent-2", "agent-3"].map(
     position: "LONG",
     confidence: 0.7,
     thesis:
-      "INFY has snapshot-grounded momentum suitable for this replay test.",
+      "ACME has snapshot-grounded momentum suitable for this replay test.",
     evidence: [
       {
         sourceId: `market.quote:${marketSnapshot.symbol}`,
         claimType: "CURRENT_PRICE",
         citedValue: marketSnapshot.currentPrice,
-        statement: "The current INFY price matches the shared replay snapshot.",
+        statement: "The current ACME price matches the shared replay snapshot.",
       },
     ],
     risks: [],
@@ -73,11 +83,11 @@ const finalVotes: FinalVote[] = proposals.map((proposal) => ({
     },
   ],
   revisedThesis:
-    "INFY remains a snapshot-grounded LONG after cross-examination.",
+    "ACME remains a snapshot-grounded LONG after cross-examination.",
   position: "LONG",
   confidence: 0.7,
   supportedProposalAgentId: proposal.agentId,
-  rationale: "The shared INFY snapshot supports the final LONG vote.",
+  rationale: "The shared ACME snapshot supports the final LONG vote.",
 }));
 
 const consensus = resolveConsensus(finalVotes);
@@ -169,7 +179,7 @@ process.env.SIGNOZ_MCP_TIMEOUT_MS = "100";
 const auditorFixture = {
   sessionId: "auditor-evidence-fault",
   snapshot: {
-    symbol: "INFY",
+    symbol: "ACME",
   },
   consensus: null,
   pipelineGate: {
@@ -187,8 +197,8 @@ const auditorFixture = {
         tolerancePct: 2,
         checkedEvidence: [
           {
-            citedValue: 1819.26,
-            referenceValue: 1684.5,
+            citedValue: 112.86,
+            referenceValue: 104.5,
             deviationPct: 8,
             validationStatus: "price_deviation",
           },
@@ -214,8 +224,8 @@ const auditorFallback = await answerTelemetryQuestion(
   "Why was execution blocked?",
 );
 assert.equal(auditorFallback.source, "session_fallback");
-assert.match(auditorFallback.answer, /1819\.26/);
-assert.match(auditorFallback.answer, /1684\.50/);
+assert.match(auditorFallback.answer, /112\.86/);
+assert.match(auditorFallback.answer, /104\.50/);
 assert.match(auditorFallback.answer, /8\.00%/);
 assert.match(auditorFallback.answer, /2\.00%/);
 assert.match(auditorFallback.answer, /EVIDENCE_INTEGRITY/);

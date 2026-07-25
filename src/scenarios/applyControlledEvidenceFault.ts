@@ -60,7 +60,7 @@ export function applyControlledEvidenceFault(
     );
   }
 
-  const symbol = reference?.symbol ?? "INFY";
+  const symbol = reference?.symbol ?? "ACME";
   const originalValue = reference?.currentPrice ?? targetClaim.citedValue;
   const tamperedValue = Number((originalValue * 1.08).toFixed(2));
 
@@ -78,8 +78,7 @@ export function applyControlledEvidenceFault(
               sourceId: `market.quote:${symbol}`,
               claimType: "CURRENT_PRICE" as const,
               citedValue: tamperedValue,
-              statement:
-                `${symbol} is trading at ${tamperedValue.toFixed(2)} according to the cited market evidence.`,
+              statement: `${symbol} is trading at ${tamperedValue.toFixed(2)} according to the cited market evidence.`,
             }
           : claim,
       ),

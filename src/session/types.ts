@@ -81,6 +81,7 @@ export interface RecordedSession {
   schemaVersion: 4;
   sessionId: string;
   createdAt: string;
+  durationMs: number;
   mode: SessionScenario;
   scenario: SessionScenario;
   scenarioInjection: ScenarioInjectionRecord;

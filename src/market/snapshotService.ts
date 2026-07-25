@@ -69,7 +69,7 @@ export async function createSnapshotCandidate(
           ? marketResult.error.message
           : "Market data was unavailable.";
 
-      if (symbol === "INFY" && exchange === "NSE") {
+      if (symbol === "ACME" && exchange === "US") {
         const fallback = buildFallbackCandidate({
           candidateId,
           createdAt,
@@ -142,8 +142,8 @@ export async function createSnapshotCandidate(
           detail:
             researchResult.research.status === "READY"
               ? `${researchResult.sources.length} cited web source(s) attached.`
-              : researchResult.research.note ??
-                "Web context was unavailable.",
+              : (researchResult.research.note ??
+                "Web context was unavailable."),
         },
       ],
       research: researchResult.research,
@@ -193,8 +193,7 @@ export function validateSnapshot(snapshot: MarketSnapshot): SnapshotCheck[] {
   const rsi =
     snapshot.indicators.rsi14 >= 0 && snapshot.indicators.rsi14 <= 100;
   const observedAt = new Date(snapshot.observedAt);
-  const ageHours =
-    (Date.now() - observedAt.valueOf()) / (60 * 60 * 1000);
+  const ageHours = (Date.now() - observedAt.valueOf()) / (60 * 60 * 1000);
   const maxAgeHours = configuredMaxAgeHours();
   const fresh =
     !Number.isNaN(observedAt.valueOf()) &&
@@ -261,10 +260,10 @@ function buildFallbackCandidate(input: {
   research: Awaited<ReturnType<typeof researchSnapshotContext>>;
 }): SnapshotCandidate {
   const source: SnapshotSource = {
-    id: "fixture-infy",
+    id: "fixture-acme",
     kind: "MARKET_DATA",
     provider: "TraceRoom Fixture",
-    title: "Canonical deterministic INFY replay fixture",
+    title: "Canonical deterministic ACME replay fixture",
     url: "traceroom://fixtures/snapshot-001",
     observedAt: marketSnapshot.observedAt,
     fields: MARKET_FIELDS,
@@ -280,11 +279,11 @@ function buildFallbackCandidate(input: {
     fallbackReason: input.reason,
     instrument: {
       requestedSymbol: input.requestedSymbol,
-      symbol: "INFY",
-      exchange: "NSE",
-      providerSymbol: "INFY:NSE",
-      name: "Infosys Limited",
-      currency: "INR",
+      symbol: "ACME",
+      exchange: "US",
+      providerSymbol: "ACME",
+      name: "ACME Replay Corporation",
+      currency: "USD",
     },
     snapshot: structuredClone(marketSnapshot),
     sources: [source, ...input.research.sources],
@@ -295,7 +294,7 @@ function buildFallbackCandidate(input: {
         label: "Deterministic fallback",
         status: "WARN",
         detail:
-          "Live provider data was unavailable. The canonical INFY replay fixture is being used and is clearly labeled.",
+          "Live provider data was unavailable. The canonical ACME replay fixture is being used and is clearly labeled.",
       },
       ...validateSnapshot(marketSnapshot).map((item) =>
         item.id === "freshness"

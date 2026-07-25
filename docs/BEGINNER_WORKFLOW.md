@@ -108,7 +108,7 @@ investigation, aggregate dashboards, metrics, logs, and alerts.
 The current healthy replay uses:
 
 - snapshot: `snapshot-001`
-- symbol: `INFY`
+- symbol: `ACME`
 - horizon: 30 minutes
 - agents: Momentum Scout, Mean Reversion Analyst, and Market Skeptic
 
@@ -120,7 +120,7 @@ those outputs are not prewritten UI fixtures.
 
 1. The user clicks **Run Healthy Session**.
 2. TraceRoom creates a correlated session identifier.
-3. The API loads the shared INFY replay snapshot.
+3. The API loads the selected configured replay snapshot.
 4. All three agents receive the same snapshot.
 5. Each agent makes an LLM call and submits a sealed proposal.
 6. TraceRoom validates every cited value against the shared snapshot.
@@ -138,18 +138,19 @@ applicable.
 
 ## What The User Sees
 
-### TraceRoom Command Center
+### TraceRoom Command
 
-The Command Center provides the domain-level audit view:
+Command is the demo starting point:
 
-- recorded sessions and outcomes
-- shared snapshot values
-- evidence-validation summary
-- consensus and risk verdict
-- generated proposals and final votes
-- ordered replay stages
-- session, trace, and log correlation identifiers
-- actions to investigate the supporting evidence in SigNoz
+- choose one configured snapshot or Random
+- launch any of the five replay scenarios
+- see the honest “agents debating” state during the real LLM calls
+- inspect the newest session's ticker, price, evidence count, and outcome
+- open the complete incident record
+
+The Incidents page then presents replay, agents, controlled injections, stage
+statuses, the expandable Debate transcript, real session metrics, and the
+matching SigNoz links in one continuous scroll.
 
 ### SigNoz Investigation
 
@@ -215,16 +216,16 @@ LLM result on `agent.final_vote` and records the transformation as
 
 ## Human-Readable Debate Record
 
-The **Debate** tab turns the saved agent-stage outputs into one chronological
-transcript. It shows the shared snapshot, each proposal and its evidence,
-cross-examination, final votes, consensus, and the risk verdict. Controlled
-injections appear inline, while stages stopped by the evidence gate remain
-visible as **Skipped**. The header links the readable record to its SigNoz
-trace.
+The incident's expandable **View Full Debate Transcript** section turns saved
+agent-stage outputs into one chronological record. It shows the shared
+snapshot, each proposal and its evidence, cross-examination, final votes,
+consensus, and risk verdict. Controlled injections appear inline, while stages
+stopped by the evidence gate remain visible as **Skipped**. The header links the
+readable record to its SigNoz trace.
 
 ## Upcoming Product Work
 
-- SigNoz MCP-backed Ask the Auditor
+- full snapshot authoring beyond the frozen config picker
 
 Live-market and paper-trading modes are deprioritized. They are potential data
 sources for TraceRoom, not the core product.

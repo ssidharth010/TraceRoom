@@ -20,8 +20,8 @@ TraceRoom audits.
 ## Current Replay Fixture
 
 - Snapshot: `snapshot-001`
-- Symbol: `INFY`
-- Current price: `1684.50`
+- Symbol: `ACME`
+- Current price: `104.50`
 - Previous close: `1600.00`
 - Horizon: `30` minutes
 - Agents: Momentum Scout, Mean Reversion Analyst, Market Skeptic
@@ -39,17 +39,18 @@ The UI and API expose five real-agent replay paths:
 - controlled post-stage workflow error
 - controlled consensus deadlock
 
-All paths send the INFY snapshot through the configured proposal LLM calls.
+All paths send the selected configured snapshot through the proposal LLM calls.
 Healthy, risk-veto, error, and deadlock continue through rebuttal and final
 voting. Evidence-fault terminates immediately after deterministic validation
 fails, leaving those downstream stages explicitly not run. Scenario controls
 are disclosed in the replay and telemetry and make the incident demonstrations
 repeatable. No live or paper trade is placed.
 
-## Debate Transcript
+## Incident Record And Debate Transcript
 
-The decision detail's **Debate** tab is the human-readable companion to the
-SigNoz trace. It renders the persisted stage outputs in chronological order:
+Each incident is one continuous audit record. Its collapsed Debate transcript
+is the human-readable companion to the SigNoz trace and renders the persisted
+stage outputs in chronological order:
 snapshot, proposals, per-claim validation, cross-examination, final votes,
 consensus, and risk verdict. Scenario injections are labeled at the point where
 they enter the workflow, generated and recorded votes remain distinguishable,

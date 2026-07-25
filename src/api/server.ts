@@ -3,6 +3,10 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import {
+  configuredSnapshots,
+  getConfiguredSnapshot,
+} from "../config/snapshots";
 import { answerTelemetryQuestion } from "../integrations/signozMcpAuditor";
 import { createSnapshotCandidate } from "../market/snapshotService";
 import type { SnapshotExchange } from "../market/snapshotTypes";
@@ -68,6 +72,10 @@ async function route(
       ok: true,
       service: "traceroom-api",
       version: "0.1.0",
+      revision: "configured-snapshots-v1",
+      configuredSnapshotIds: configuredSnapshots.map(
+        (snapshot) => snapshot.snapshotId,
+      ),
     });
     return;
   }
@@ -75,13 +83,9 @@ async function route(
   if (request.method === "POST" && pathname === "/sessions/run") {
     const body = await readJsonBody(request);
     const bodyRecord =
-      body && typeof body === "object"
-        ? (body as Record<string, unknown>)
-        : {};
+      body && typeof body === "object" ? (body as Record<string, unknown>) : {};
     const scenario = resolveSessionScenario(
-      (typeof bodyRecord.scenario === "string"
-        ? bodyRecord.scenario
-        : null) ??
+      (typeof bodyRecord.scenario === "string" ? bodyRecord.scenario : null) ??
         requestUrl.searchParams.get("scenario") ??
         requestUrl.searchParams.get("mode"),
     );
@@ -89,9 +93,13 @@ async function route(
       typeof bodyRecord.snapshotId === "string"
         ? bodyRecord.snapshotId.trim()
         : "";
-    const candidate = snapshotId ? snapshotStore.get(snapshotId) : null;
-    if (snapshotId && !candidate) {
-      sendJson(response, 404, { error: "Snapshot candidate not found." });
+    const configuredSnapshot = snapshotId
+      ? getConfiguredSnapshot(snapshotId)
+      : null;
+    const candidate =
+      snapshotId && !configuredSnapshot ? snapshotStore.get(snapshotId) : null;
+    if (snapshotId && !configuredSnapshot && !candidate) {
+      sendJson(response, 404, { error: "Configured snapshot not found." });
       return;
     }
     if (candidate && (candidate.status !== "LOCKED" || !candidate.snapshot)) {
@@ -103,7 +111,7 @@ async function route(
 
     const session = await runDebateSession(
       scenario,
-      candidate?.snapshot ?? undefined,
+      configuredSnapshot ?? candidate?.snapshot ?? undefined,
     );
     store.save(session);
     console.log(
@@ -156,7 +164,8 @@ async function route(
       });
     } catch (error) {
       sendJson(response, 400, {
-        error: error instanceof Error ? error.message : "Invalid snapshot request.",
+        error:
+          error instanceof Error ? error.message : "Invalid snapshot request.",
       });
       return;
     }
@@ -225,11 +234,7 @@ async function route(
       return;
     }
 
-    sendJson(
-      response,
-      200,
-      await answerTelemetryQuestion(session, question),
-    );
+    sendJson(response, 200, await answerTelemetryQuestion(session, question));
     return;
   }
 

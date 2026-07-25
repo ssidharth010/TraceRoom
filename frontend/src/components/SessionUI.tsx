@@ -1,94 +1,132 @@
-import { ArrowSquareOut, LockKey, ShieldCheck, Warning } from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "motion/react";
+import {
+  CheckCircle,
+  LockKey,
+  Warning,
+  WarningDiamond,
+  XCircle,
+} from "@phosphor-icons/react";
 import type { RecordedSession } from "../types";
 
-export function StatusChip({ session }: { session: RecordedSession }) {
-  const blocked = session.execution.status === "BLOCKED";
+export function OutcomeBadge({
+  outcome,
+}: {
+  outcome: RecordedSession["outcome"];
+}) {
+  const Icon =
+    outcome === "APPROVED"
+      ? CheckCircle
+      : outcome === "DEADLOCKED"
+        ? Warning
+        : outcome === "VETOED"
+          ? LockKey
+          : outcome === "ERROR"
+            ? XCircle
+            : WarningDiamond;
+
   return (
-    <span className={blocked ? "status-chip blocked" : "status-chip ready"}>
-      {blocked ? <LockKey weight="fill" /> : <ShieldCheck weight="fill" />}
-      {blocked ? "EXECUTION BLOCKED" : "DECISION READY"}
+    <span className={`outcome-badge outcome-${outcome.toLowerCase()}`}>
+      <Icon weight="fill" />
+      {outcome.replaceAll("_", " ")}
     </span>
   );
 }
 
-export function EvidenceRupture({ session }: { session: RecordedSession | null }) {
-  const failed = session?.evidenceValidation.agents
-    .flatMap((agent) => agent.checkedEvidence)
-    .find((claim) => claim.validationStatus !== "valid");
-  const cited = failed?.citedValue ?? 1819.26;
-  const reference = failed?.referenceValue ?? 1684.5;
-  const deviation = failed?.deviationPct ?? 8;
-  const tolerance =
-    session?.evidenceValidation.agents.find((agent) =>
-      agent.checkedEvidence.includes(failed!),
-    )?.tolerancePct ?? 2;
-  const reduce = useReducedMotion();
+export function StatusChip({ session }: { session: RecordedSession }) {
+  return <OutcomeBadge outcome={session.outcome} />;
+}
+
+export function ControlledInjectionCard({
+  session,
+}: {
+  session: RecordedSession;
+}) {
+  const injection = session.scenarioInjection;
+  if (!injection.injected) {
+    return null;
+  }
 
   return (
-    <section className="rupture" aria-labelledby="rupture-title">
-      <div className="rupture-copy">
-        <span className="eyebrow">EVIDENCE BREACH</span>
-        <h2 id="rupture-title">One bad number. Zero second chances.</h2>
-        <p>
-          TraceRoom checks every agent claim against the authoritative market snapshot before consensus or execution.
-        </p>
-      </div>
-      <div className="rupture-stage">
-        <motion.div
-          className="price-readout cited"
-          initial={reduce ? false : { opacity: 0, x: -48 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-        >
-          <span>AGENT CITED</span>
-          <strong>{cited.toFixed(2)}</strong>
-        </motion.div>
-        <div className="rupture-mark">
-          <Warning weight="fill" />
-          <strong>{deviation.toFixed(2)}%</strong>
-          <span>LIMIT {tolerance.toFixed(2)}%</span>
+    <section className="fault-injection-card" aria-label="Controlled injection">
+      <header>
+        <span>⚡ CONTROLLED FAULT INJECTION</span>
+        <strong>{formatScenario(injection.type)}</strong>
+      </header>
+      <p>{injection.description}</p>
+
+      {injection.evidenceOverride && (
+        <dl className="injection-values">
+          <div>
+            <dt>Agent</dt>
+            <dd>{agentName(session, injection.evidenceOverride.agentId)}</dd>
+          </div>
+          <div>
+            <dt>Claim</dt>
+            <dd>{injection.evidenceOverride.claimIndex + 1}</dd>
+          </div>
+          <div>
+            <dt>Generated</dt>
+            <dd>{formatNumber(injection.evidenceOverride.originalValue)}</dd>
+          </div>
+          <div>
+            <dt>Forced</dt>
+            <dd>{formatNumber(injection.evidenceOverride.forcedValue)}</dd>
+          </div>
+        </dl>
+      )}
+
+      {injection.voteOverrides.length > 0 && (
+        <div className="vote-override-table">
+          <div className="vote-override-head">
+            <span>Agent</span>
+            <span>Generated</span>
+            <span>Forced</span>
+            <span>Changed</span>
+          </div>
+          {injection.voteOverrides.map((override) => (
+            <div key={override.agentId}>
+              <strong>{agentName(session, override.agentId)}</strong>
+              <span>{override.originalPosition}</span>
+              <span>{override.forcedPosition}</span>
+              <span className={override.overridden ? "changed-yes" : ""}>
+                {override.overridden ? "YES" : "NO"}
+              </span>
+            </div>
+          ))}
         </div>
-        <motion.div
-          className="price-readout reference"
-          initial={reduce ? false : { opacity: 0, x: 48 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-        >
-          <span>AUTHORITATIVE</span>
-          <strong>{reference.toFixed(2)}</strong>
-        </motion.div>
-      </div>
+      )}
+
+      {injection.riskPolicyOverride && (
+        <div className="policy-override">
+          <span>{injection.riskPolicyOverride.ruleId}</span>
+          <strong>
+            {injection.riskPolicyOverride.originalThreshold}% →{" "}
+            {injection.riskPolicyOverride.scenarioThreshold}%
+          </strong>
+        </div>
+      )}
     </section>
   );
 }
 
-export function BlockReceipt({ session }: { session: RecordedSession }) {
-  const skipped = Object.entries(session.stageStatuses)
-    .filter(([, status]) => status === "SKIPPED")
-    .map(([stage]) => stage);
+export function agentName(session: RecordedSession, agentId: string): string {
   return (
-    <section className="receipt" aria-labelledby="receipt-title">
-      <div>
-        <span className="receipt-index">BLOCK RECEIPT</span>
-        <h2 id="receipt-title">{session.pipelineGate.reasonCode ?? session.outcome}</h2>
-        <p>{session.pipelineGate.message || session.execution.reason}</p>
-      </div>
-      <dl className="receipt-grid">
-        <div><dt>Decision</dt><dd>{session.snapshot.symbol}</dd></div>
-        <div><dt>Gate</dt><dd>{session.pipelineGate.blockedAt ?? "RISK_REVIEW"}</dd></div>
-        <div><dt>Execution</dt><dd>{session.execution.status}</dd></div>
-        <div><dt>Stages skipped</dt><dd>{skipped.length}</dd></div>
-        <div className="receipt-trace"><dt>Trace</dt><dd>{session.signoz.traceId}</dd></div>
-      </dl>
-      <a className="text-link" href={session.signoz.traceUrl} target="_blank" rel="noreferrer">
-        Verify trace <ArrowSquareOut />
-      </a>
-    </section>
+    session.agents.find((agent) => agent.agentId === agentId)?.displayName ??
+    "Unknown agent"
   );
 }
 
-export function formatScenario(scenario: string): string {
-  return scenario.replaceAll("-", " ").toUpperCase();
+export function formatScenario(value: string): string {
+  return value.replaceAll("-", " ").replaceAll("_", " ").toUpperCase();
 }
 
+export function formatStageName(value: string): string {
+  return value
+    .replace(/([A-Z])/g, " $1")
+    .trim()
+    .replaceAll("_", " ")
+    .toUpperCase();
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString("en-US", { maximumFractionDigits: 4 });
+}

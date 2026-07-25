@@ -45,22 +45,25 @@ Configure the LLM variables in `.env`, start SigNoz/Foundry, then run:
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. The command page launches the canonical INFY
-evidence breach, then moves into a live agent room while the pipeline runs.
-The incident lab exposes all five deterministic scenarios, and the evidence
-page combines natural-language SigNoz MCP investigation with a downloadable
-SHA-256 proof receipt. Every run persists the real agent-stage outputs and
-emits a fresh `debate.session` trace.
+Open `http://127.0.0.1:5173`. Command provides a read-only configured snapshot
+picker and launches the healthy, evidence-fault, risk-veto, error, and deadlock
+replays. Every run persists the real agent-stage outputs and emits a fresh
+`debate.session` trace.
 
-The interface is split into five purpose-built spaces:
+Development mode watches both the API and UI. If an older TraceRoom API is
+already occupying port `8787`, stop it and restart `npm run dev`; the startup
+check will reject stale API revisions instead of serving mismatched snapshot
+behavior.
 
-- **Command** tells the product story and launches the breach.
-- **Agent room** renders the active reasoning network on an interactive canvas,
-  then replays recorded agent transmissions.
-- **Snapshot forge** validates a new NSE or US equity snapshot, shows field-level
-  provenance, locks the evidence, and releases a healthy agent session.
-- **Incidents** compares healthy, evidence-fault, risk-veto, error, and deadlock
-  sessions without collapsing them into a generic dashboard.
+The interface is split into four purpose-built spaces:
+
+- **Command** selects a configured snapshot, launches all five scenarios, and
+  shows the newest real decision.
+- **Agent room** replays one explicitly selected incident on the interactive
+  decision network.
+- **Incidents** opens each recorded session as one continuous audit record:
+  replay, agents, controlled injections, stage status, debate, metrics, and
+  SigNoz investigation links.
 - **Evidence** reconstructs a selected decision through SigNoz MCP and exports
   an integrity-stamped receipt.
 
@@ -72,7 +75,7 @@ npm --prefix frontend run dev
 ```
 
 The Vite server proxies `/api` to `http://127.0.0.1:8787`. Set
-`VITE_API_BASE_URL` when the API is hosted elsewhere. Run a single INFY session
+`VITE_API_BASE_URL` when the API is hosted elsewhere. Run a single ACME session
 without the UI with `npm run run:once`.
 
 ## Replay Scenarios
@@ -95,38 +98,24 @@ generated-to-forced mapping for every controlled final vote.
 
 ## Human-Readable Debate Record
 
-The decision detail includes a **Debate** tab that renders the persisted session
-as one chronological transcript: authoritative snapshot, independent
-proposals, validated evidence, cross-examination, final votes, consensus, and
-the deterministic risk verdict. Controlled evidence, vote, policy, and error
-injections are disclosed inline at the point where they affect the replay.
-Skipped stages remain visible, so an evidence-blocked session shows exactly
-where the pipeline stopped. The transcript links to the matching SigNoz trace
-for structural telemetry inspection.
+Each incident includes a collapsed **View Full Debate Transcript** section. It
+renders the persisted session chronologically: authoritative snapshot,
+independent proposals, validated evidence, cross-examination, final votes,
+consensus, and deterministic risk verdict. Controlled evidence, vote, policy,
+and error injections are disclosed inline. Skipped stages remain visible, and
+the transcript links to the matching SigNoz trace.
 
 - Live and paper trading: deprioritized
 
-## Snapshot Forge
+## Configured Snapshot Picker
 
-Snapshot Forge is an optional showcase path. The canonical INFY fixture remains
-the guaranteed demo.
+`src/config/snapshots.ts` defines the read-only replay fixtures used by Command.
+The canonical default is `ACME` / `snapshot-001`; NOVA, ORBT, and VELA provide
+different prices, volume, and RSI values for dashboard differentiation.
+Command also provides a Random option. `POST /sessions/run` accepts an optional
+`snapshotId`; omitting it preserves the canonical ACME behavior.
 
-Set `TWELVE_DATA_API_KEY` to validate symbols and retrieve quote plus daily
-OHLCV history. TraceRoom calculates SMA20, EMA9, RSI14, and average volume
-locally. Set the separate `OPENAI_API_KEY` to attach web-searched company
-context, catalysts, risks, and citations. OpenAI output is never merged into
-numeric market fields.
-
-The flow is deliberately gated:
-
-1. `POST /market/snapshots` creates a candidate.
-2. A candidate can be `READY`, `STALE`, `BLOCKED`, or `FIXTURE_FALLBACK`.
-3. `POST /market/snapshots/:id/lock` creates an immutable `LOCKED` candidate.
-4. `POST /sessions/run` accepts `{ "scenario": "healthy", "snapshotId": "..." }`.
-
-Only locked candidates can run. If Twelve Data fails, INFY on NSE may use the
-clearly labeled fixture; any other symbol stays blocked. If OpenAI web search
-fails, trusted market numbers can still pass validation without context.
+Full snapshot authoring is roadmap work and is not part of the frozen demo.
 
 ## SigNoz
 

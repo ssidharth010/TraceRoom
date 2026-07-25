@@ -9,10 +9,7 @@ import {
   validateSnapshot,
 } from "./snapshotService";
 import type { SnapshotCandidate } from "./snapshotTypes";
-import {
-  mapTwelveDataSnapshot,
-  MarketProviderError,
-} from "./twelveDataClient";
+import { mapTwelveDataSnapshot, MarketProviderError } from "./twelveDataClient";
 
 const bars = Array.from({ length: 25 }, (_, index) => ({
   datetime: `2026-07-${String(index + 1).padStart(2, "0")}`,
@@ -112,12 +109,12 @@ delete process.env.TWELVE_DATA_API_KEY;
 delete process.env.OPENAI_API_KEY;
 
 const fallback = await createSnapshotCandidate({
-  symbol: "INFY",
-  exchange: "NSE",
+  symbol: "ACME",
+  exchange: "US",
 });
 assert.equal(fallback.status, "FIXTURE_FALLBACK");
 assert.equal(fallback.snapshot?.snapshotId, "snapshot-001");
-assert.equal(fallback.snapshot?.currentPrice, 1684.5);
+assert.equal(fallback.snapshot?.currentPrice, 104.5);
 assert.equal(fallback.canLock, true);
 
 const blocked = await createSnapshotCandidate({
@@ -160,7 +157,10 @@ const dynamicFault = applyControlledEvidenceFault(
 assert.equal(dynamicFault.faultInjected, true);
 if (dynamicFault.faultInjected) {
   assert.equal(dynamicFault.tamperedValue, 133.92);
-  assert.equal(dynamicFault.proposals[0].evidence[0].sourceId, "market.quote:AAPL");
+  assert.equal(
+    dynamicFault.proposals[0].evidence[0].sourceId,
+    "market.quote:AAPL",
+  );
 }
 
 const canonicalFault = applyControlledEvidenceFault(
@@ -170,7 +170,7 @@ const canonicalFault = applyControlledEvidenceFault(
 );
 assert.equal(canonicalFault.faultInjected, true);
 if (canonicalFault.faultInjected) {
-  assert.equal(canonicalFault.tamperedValue, 1819.26);
+  assert.equal(canonicalFault.tamperedValue, 112.86);
 }
 
 const numericSnapshotBeforeResearch = JSON.stringify(mapped.snapshot);

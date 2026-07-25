@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AgentCanvas } from "../components/AgentCanvas";
 import { StatusChip } from "../components/SessionUI";
 import { useTraceRoom } from "../TraceRoomContext";
@@ -15,7 +16,7 @@ const liveStages = [
   {
     agent: "Momentum",
     status: "Reading shared snapshot",
-    detail: "Testing trend strength against the INFY market frame.",
+    detail: "Testing trend strength against the {symbol} market frame.",
   },
   {
     agent: "Mean Reversion",
@@ -35,11 +36,30 @@ const liveStages = [
 ];
 
 export function RoomPage() {
-  const { selected, loadingScenario, activeRunSymbol, runScenario } = useTraceRoom();
+  const {
+    sessions,
+    selected,
+    selectSession,
+    loadingScenario,
+    activeRunSymbol,
+  } = useTraceRoom();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const reduce = useReducedMotion();
   const [replayIndex, setReplayIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [liveIndex, setLiveIndex] = useState(0);
+  const requestedSessionId = searchParams.get("session");
+
+  useEffect(() => {
+    if (
+      requestedSessionId &&
+      requestedSessionId !== selected?.sessionId &&
+      sessions.some((session) => session.sessionId === requestedSessionId)
+    ) {
+      selectSession(requestedSessionId);
+    }
+  }, [requestedSessionId, selectSession, selected?.sessionId, sessions]);
 
   useEffect(() => {
     if (!loadingScenario || reduce) return;
@@ -68,7 +88,7 @@ export function RoomPage() {
       selected?.proposals.map((proposal) => ({
         agent:
           selected.agents.find((agent) => agent.agentId === proposal.agentId)
-            ?.displayName ?? proposal.agentId,
+            ?.displayName ?? "Unknown agent",
         position: proposal.position,
         text: proposal.thesis,
         confidence: proposal.confidence,
@@ -84,7 +104,9 @@ export function RoomPage() {
             <span className="eyebrow">LIVE AGENT ROOM</span>
             <h1>Reasoning in motion.</h1>
           </div>
-          <span className="live-chip"><span /> SESSION ACTIVE</span>
+          <span className="live-chip">
+            <span /> SESSION ACTIVE
+          </span>
         </header>
 
         <div className="room-layout">
@@ -116,7 +138,9 @@ export function RoomPage() {
             <div className="conversation-feed">
               {liveStages.map((stage, index) => (
                 <motion.article
-                  className={index === liveIndex ? "live-message active" : "live-message"}
+                  className={
+                    index === liveIndex ? "live-message active" : "live-message"
+                  }
                   key={stage.agent}
                   animate={{
                     opacity: index <= liveIndex ? 1 : 0.34,
@@ -125,9 +149,20 @@ export function RoomPage() {
                 >
                   <header>
                     <strong>{stage.agent}</strong>
-                    <span>{index === liveIndex ? "TALKING" : index < liveIndex ? "HEARD" : "QUEUED"}</span>
+                    <span>
+                      {index === liveIndex
+                        ? "TALKING"
+                        : index < liveIndex
+                          ? "HEARD"
+                          : "QUEUED"}
+                    </span>
                   </header>
-                  <p>{stage.detail.replace("INFY", activeRunSymbol ?? "INFY")}</p>
+                  <p>
+                    {stage.detail.replace(
+                      "{symbol}",
+                      activeRunSymbol ?? "configured snapshot",
+                    )}
+                  </p>
                   <footer>{stage.status.toUpperCase()}</footer>
                 </motion.article>
               ))}
@@ -143,14 +178,16 @@ export function RoomPage() {
       <div className="page room-empty">
         <AgentCanvas session={null} />
         <div className="room-empty-copy">
-          <h1>The room is waiting.</h1>
-          <p>Launch the deterministic evidence breach to watch the agents reason, challenge, and hit the gate.</p>
+          <h1>Select an incident first.</h1>
+          <p>
+            Agent Room never replays a global default. Bind it to a specific
+            recorded decision from Incidents.
+          </p>
           <button
             className="primary-button"
-            disabled={loadingScenario !== null}
-            onClick={() => void runScenario("evidence-fault")}
+            onClick={() => navigate("/incidents")}
           >
-            <Play weight="fill" /> START SESSION
+            OPEN INCIDENTS
           </button>
         </div>
       </div>
@@ -162,20 +199,46 @@ export function RoomPage() {
     <div className="page room-page">
       <header className="page-heading room-heading">
         <div>
-          <span className="eyebrow">LIVE AGENT ROOM</span>
+          <span className="eyebrow">SESSION-BOUND AGENT ROOM</span>
           <h1>{selected.snapshot.symbol} decision network</h1>
         </div>
-        <StatusChip session={selected} />
+        <div className="room-session-binding">
+          <label htmlFor="room-session">BOUND SESSION</label>
+          <select
+            id="room-session"
+            value={selected.sessionId}
+            onChange={(event) => {
+              selectSession(event.target.value);
+              navigate(
+                `/room?session=${encodeURIComponent(event.target.value)}`,
+              );
+            }}
+          >
+            {sessions.map((session) => (
+              <option value={session.sessionId} key={session.sessionId}>
+                {session.snapshot.symbol} / {session.scenario} /{" "}
+                {session.sessionId.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+          <StatusChip session={selected} />
+        </div>
       </header>
 
       <div className="room-layout">
         <section className="room-canvas-panel">
           <AgentCanvas
             session={selected}
-            phase={selected.replay.length ? replayIndex / selected.replay.length : 0}
+            phase={
+              selected.replay.length ? replayIndex / selected.replay.length : 0
+            }
           />
           <div className="playback">
-            <button className="icon-button" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause replay" : "Play replay"}>
+            <button
+              className="icon-button"
+              onClick={() => setPlaying((value) => !value)}
+              aria-label={playing ? "Pause replay" : "Play replay"}
+            >
               {playing ? <SkipForward /> : <Play />}
             </button>
             <div className="playback-track" aria-hidden="true">
@@ -184,7 +247,11 @@ export function RoomPage() {
                 transition={{ duration: reduce ? 0 : 0.4 }}
               />
             </div>
-            <button className="icon-button" onClick={() => setReplayIndex(0)} aria-label="Restart replay">
+            <button
+              className="icon-button"
+              onClick={() => setReplayIndex(0)}
+              aria-label="Restart replay"
+            >
               <ArrowClockwise />
             </button>
           </div>
@@ -197,7 +264,10 @@ export function RoomPage() {
               exit={{ opacity: 0, y: -10 }}
             >
               <span>{String(step?.order ?? 0).padStart(2, "0")}</span>
-              <div><strong>{step?.title}</strong><p>{step?.detail}</p></div>
+              <div>
+                <strong>{step?.title}</strong>
+                <p>{step?.detail}</p>
+              </div>
             </motion.div>
           </AnimatePresence>
         </section>
@@ -215,7 +285,10 @@ export function RoomPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.12 }}
               >
-                <header><strong>{message.agent}</strong><span>{Math.round(message.confidence * 100)}%</span></header>
+                <header>
+                  <strong>{message.agent}</strong>
+                  <span>{Math.round(message.confidence * 100)}%</span>
+                </header>
                 <p>{message.text}</p>
                 <footer>{message.position}</footer>
               </motion.article>
@@ -227,7 +300,10 @@ export function RoomPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                <header><strong>EVIDENCE GATE</strong><LockKey weight="fill" /></header>
+                <header>
+                  <strong>EVIDENCE GATE</strong>
+                  <LockKey weight="fill" />
+                </header>
                 <p>{selected.pipelineGate.message}</p>
                 <footer>TRANSMISSION TERMINATED</footer>
               </motion.article>

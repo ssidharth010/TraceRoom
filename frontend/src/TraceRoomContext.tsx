@@ -17,9 +17,11 @@ interface TraceRoomState {
   sessions: RecordedSession[];
   selected: RecordedSession | null;
   loadingScenario: SessionScenario | null;
+  lastCompletedRun: RecordedSession | null;
   activeRunSymbol: string | null;
   booting: boolean;
   error: string | null;
+  dismissCompletedRun: () => void;
   selectSession: (sessionId: string) => void;
   runScenario: (
     scenario: SessionScenario,
@@ -36,6 +38,8 @@ export function TraceRoomProvider({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadingScenario, setLoadingScenario] =
     useState<SessionScenario | null>(null);
+  const [lastCompletedRun, setLastCompletedRun] =
+    useState<RecordedSession | null>(null);
   const [activeRunSymbol, setActiveRunSymbol] = useState<string | null>(null);
   const [booting, setBooting] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +49,15 @@ export function TraceRoomProvider({ children }: { children: ReactNode }) {
     try {
       const data = await requestSessions();
       setSessions(data);
-      setSelectedId((current) => current ?? data[0]?.sessionId ?? null);
+      setSelectedId((current) =>
+        current && data.some((session) => session.sessionId === current)
+          ? current
+          : null,
+      );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not load sessions.");
+      setError(
+        caught instanceof Error ? caught.message : "Could not load sessions.",
+      );
     } finally {
       setBooting(false);
     }
@@ -57,35 +67,42 @@ export function TraceRoomProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const runScenario = useCallback(async (
-    scenario: SessionScenario,
-    snapshotId?: string,
-    symbol?: string,
-  ) => {
-    setLoadingScenario(scenario);
-    setActiveRunSymbol(symbol ?? "INFY");
-    setError(null);
-    try {
-      const session = await requestRunSession(scenario, snapshotId);
-      setSessions((current) => [
-        session,
-        ...current.filter((item) => item.sessionId !== session.sessionId),
-      ]);
-      setSelectedId(session.sessionId);
-      return session;
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Session run failed.");
-      return null;
-    } finally {
-      setLoadingScenario(null);
-    }
+  const dismissCompletedRun = useCallback(() => {
+    setLastCompletedRun(null);
   }, []);
+
+  const runScenario = useCallback(
+    async (scenario: SessionScenario, snapshotId?: string, symbol?: string) => {
+      setLoadingScenario(scenario);
+      setLastCompletedRun(null);
+      setActiveRunSymbol(symbol ?? null);
+      setError(null);
+      try {
+        const session = await requestRunSession(scenario, snapshotId);
+        setSessions((current) => [
+          session,
+          ...current.filter((item) => item.sessionId !== session.sessionId),
+        ]);
+        setSelectedId(session.sessionId);
+        setLastCompletedRun(session);
+        return session;
+      } catch (caught) {
+        setError(
+          caught instanceof Error ? caught.message : "Session run failed.",
+        );
+        return null;
+      } finally {
+        setLoadingScenario(null);
+      }
+    },
+    [],
+  );
 
   const selected = useMemo(
     () =>
-      sessions.find((session) => session.sessionId === selectedId) ??
-      sessions[0] ??
-      null,
+      selectedId
+        ? (sessions.find((session) => session.sessionId === selectedId) ?? null)
+        : null,
     [selectedId, sessions],
   );
 
@@ -95,9 +112,11 @@ export function TraceRoomProvider({ children }: { children: ReactNode }) {
         sessions,
         selected,
         loadingScenario,
+        lastCompletedRun,
         activeRunSymbol,
         booting,
         error,
+        dismissCompletedRun,
         selectSession: setSelectedId,
         runScenario,
         refresh,

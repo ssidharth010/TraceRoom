@@ -15,9 +15,9 @@ export interface EvaluationFixture {
 export const evaluationFixture: EvaluationFixture = {
   evaluationId: "evaluation-001",
   snapshotId: "snapshot-001",
-  symbol: "INFY",
-  entryPrice: 1684.5,
-  exitPrice: 1650,
+  symbol: "ACME",
+  entryPrice: 104.5,
+  exitPrice: 102.36,
   entryTimestamp: "2026-07-18T18:12:27.000Z",
   exitTimestamp: "2026-07-18T18:42:27.000Z",
   horizonMinutes: 30,

@@ -1,8 +1,6 @@
 import type {
   RecordedSession,
   SessionScenario,
-  SnapshotCandidate,
-  SnapshotExchange,
   TelemetryQuestionAnswer,
 } from "./types";
 
@@ -21,26 +19,6 @@ export async function runSession(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ scenario, snapshotId }),
   });
-}
-
-export async function createSnapshot(
-  symbol: string,
-  exchange: SnapshotExchange,
-): Promise<SnapshotCandidate> {
-  return requestJson<SnapshotCandidate>(`${apiBaseUrl}/market/snapshots`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ symbol, exchange }),
-  });
-}
-
-export async function lockSnapshot(
-  candidateId: string,
-): Promise<SnapshotCandidate> {
-  return requestJson<SnapshotCandidate>(
-    `${apiBaseUrl}/market/snapshots/${encodeURIComponent(candidateId)}/lock`,
-    { method: "POST" },
-  );
 }
 
 export async function askAuditor(
@@ -69,6 +47,14 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
     const payload = (await response.json().catch(() => null)) as {
       error?: string;
     } | null;
+    if (
+      response.status === 404 &&
+      payload?.error === "Snapshot candidate not found."
+    ) {
+      throw new Error(
+        "An older TraceRoom API is running. Stop it and restart npm run dev.",
+      );
+    }
     throw new Error(payload?.error ?? `Request failed (${response.status}).`);
   }
   return (await response.json()) as T;

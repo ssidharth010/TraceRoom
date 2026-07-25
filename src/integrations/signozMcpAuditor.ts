@@ -96,7 +96,7 @@ function buildAnswer(
     const failedStage =
       session.pipelineGate.blockedAt === "EVIDENCE_VALIDATION"
         ? "evidence.validation"
-        : session.error?.stage ?? "none";
+        : (session.error?.stage ?? "none");
     return `${grounding} The stage to inspect is ${failedStage}. The session outcome is ${session.outcome}, and execution is ${session.execution.status}.`;
   }
 
@@ -139,7 +139,10 @@ function baseEvidence(session: RecordedSession): TelemetryEvidence[] {
   return [
     { label: "Session ID", value: session.sessionId },
     { label: "Trace ID", value: session.signoz.traceId },
-    { label: "Evidence status", value: session.evidenceValidation.validationStatus },
+    {
+      label: "Evidence status",
+      value: session.evidenceValidation.validationStatus,
+    },
     {
       label: "Risk verdict",
       value: session.riskReview?.status ?? "NOT RUN",
@@ -191,7 +194,9 @@ async function querySignozMcp(
   const tools = toolsResult.tools ?? [];
   const selected = selectReadOnlyTool(tools, session, question);
   if (!selected) {
-    throw new Error("SigNoz MCP did not advertise a supported read-only search tool.");
+    throw new Error(
+      "SigNoz MCP did not advertise a supported read-only search tool.",
+    );
   }
 
   const result = await mcpRequest<unknown>(
@@ -202,8 +207,9 @@ async function querySignozMcp(
     },
     sessionId,
   );
-  if (isMcpToolError(result)) {
-    throw new Error(`SigNoz MCP tool ${selected.name} returned an error.`);
+  const toolError = getMcpToolError(result);
+  if (toolError) {
+    throw new Error(`SigNoz MCP tool ${selected.name} failed: ${toolError}`);
   }
 
   return [
@@ -229,7 +235,9 @@ function selectReadOnlyTool(
   };
 
   if (/alert/i.test(question)) {
-    return call(["signoz_list_alerts", "signoz_list_alert_rules"], { limit: 20 });
+    return call(["signoz_list_alerts", "signoz_list_alert_rules"], {
+      limit: 20,
+    });
   }
   if (/dashboard/i.test(question)) {
     return call(["signoz_list_dashboards"], { limit: 20 });
@@ -357,18 +365,18 @@ async function rawMcpRequest<T>({
   }
 }
 
-function isMcpToolError(value: unknown): boolean {
+function getMcpToolError(value: unknown): string | null {
   if (!value || typeof value !== "object") {
-    return false;
+    return null;
   }
   const candidate = value as {
     isError?: unknown;
     structuredContent?: { code?: unknown };
   };
-  return (
+  const failed =
     candidate.isError === true ||
-    candidate.structuredContent?.code === "VALIDATION_FAILED"
-  );
+    candidate.structuredContent?.code === "VALIDATION_FAILED";
+  return failed ? summarizeMcpResult(value) : null;
 }
 
 function mcpAuthHeaders(): Record<string, string> {
@@ -376,7 +384,6 @@ function mcpAuthHeaders(): Record<string, string> {
   return apiKey
     ? {
         "SIGNOZ-API-KEY": apiKey,
-        Authorization: `Bearer ${apiKey}`,
       }
     : {};
 }

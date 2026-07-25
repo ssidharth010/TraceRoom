@@ -10,7 +10,15 @@ while (Date.now() - startedAt < timeoutMs) {
   try {
     const response = await fetch(healthUrl);
     if (response.ok) {
-      process.exit(0);
+      const health = await response.json();
+      if (health.revision === "configured-snapshots-v1") {
+        process.exit(0);
+      }
+
+      console.error(
+        "An older TraceRoom API is already running on this port. Stop it, then restart npm run dev.",
+      );
+      process.exit(1);
     }
   } catch {
     // The API process is still starting.
