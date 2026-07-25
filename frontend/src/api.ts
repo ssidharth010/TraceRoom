@@ -1,5 +1,7 @@
 import type {
+  DemoReadiness,
   RecordedSession,
+  SessionTelemetryVerification,
   SessionScenario,
   TelemetryQuestionAnswer,
 } from "./types";
@@ -8,6 +10,24 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 export async function loadSessions(): Promise<RecordedSession[]> {
   return requestJson<RecordedSession[]>(`${apiBaseUrl}/sessions`);
+}
+
+export async function loadDemoReadiness(): Promise<DemoReadiness> {
+  return requestJson<DemoReadiness>(`${apiBaseUrl}/demo/readiness`);
+}
+
+export async function loadSessionVerification(
+  sessionId: string,
+): Promise<SessionTelemetryVerification> {
+  return requestJson<SessionTelemetryVerification>(
+    `${apiBaseUrl}/sessions/${encodeURIComponent(sessionId)}/verification`,
+  );
+}
+
+export async function loadProofPack(sessionId: string): Promise<unknown> {
+  return requestJson<unknown>(
+    `${apiBaseUrl}/sessions/${encodeURIComponent(sessionId)}/proof-pack?verifyMcp=true`,
+  );
 }
 
 export async function runSession(

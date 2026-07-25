@@ -69,7 +69,7 @@ export async function createSnapshotCandidate(
           ? marketResult.error.message
           : "Market data was unavailable.";
 
-      if (symbol === "ACME" && exchange === "US") {
+      if (symbol === "INFY" && exchange === "NSE") {
         const fallback = buildFallbackCandidate({
           candidateId,
           createdAt,
@@ -260,10 +260,10 @@ function buildFallbackCandidate(input: {
   research: Awaited<ReturnType<typeof researchSnapshotContext>>;
 }): SnapshotCandidate {
   const source: SnapshotSource = {
-    id: "fixture-acme",
+    id: "fixture-infy",
     kind: "MARKET_DATA",
     provider: "TraceRoom Fixture",
-    title: "Canonical deterministic ACME replay fixture",
+    title: "Canonical deterministic INFY replay fixture",
     url: "traceroom://fixtures/snapshot-001",
     observedAt: marketSnapshot.observedAt,
     fields: MARKET_FIELDS,
@@ -279,11 +279,11 @@ function buildFallbackCandidate(input: {
     fallbackReason: input.reason,
     instrument: {
       requestedSymbol: input.requestedSymbol,
-      symbol: "ACME",
-      exchange: "US",
-      providerSymbol: "ACME",
-      name: "ACME Replay Corporation",
-      currency: "USD",
+      symbol: "INFY",
+      exchange: "NSE",
+      providerSymbol: "INFY:NSE",
+      name: "Infosys Limited",
+      currency: "INR",
     },
     snapshot: structuredClone(marketSnapshot),
     sources: [source, ...input.research.sources],
@@ -294,7 +294,7 @@ function buildFallbackCandidate(input: {
         label: "Deterministic fallback",
         status: "WARN",
         detail:
-          "Live provider data was unavailable. The canonical ACME replay fixture is being used and is clearly labeled.",
+          "Live provider data was unavailable. The canonical INFY replay fixture is being used and is clearly labeled.",
       },
       ...validateSnapshot(marketSnapshot).map((item) =>
         item.id === "freshness"

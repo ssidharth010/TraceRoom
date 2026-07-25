@@ -115,5 +115,6 @@ export interface RecordedSession {
     traceUrl: string;
     logsHint: string;
     dashboardUrl: string;
+    alertUrls?: string[];
   };
 }

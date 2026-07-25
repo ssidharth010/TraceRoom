@@ -54,7 +54,7 @@ export class SessionStore {
   list(): RecordedSession[] {
     const rows = this.db
       .prepare(
-        "SELECT data_json FROM sessions ORDER BY datetime(created_at) DESC",
+        "SELECT data_json FROM sessions ORDER BY created_at DESC",
       )
       .all() as Array<{ data_json: string }>;
 

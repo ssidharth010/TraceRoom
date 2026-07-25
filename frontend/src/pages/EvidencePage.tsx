@@ -9,14 +9,16 @@ import {
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { askAuditor } from "../api";
+import { downloadProofPack } from "../proofPack";
 import { useTraceRoom } from "../TraceRoomContext";
 import type { TelemetryQuestionAnswer } from "../types";
 
 export function EvidencePage() {
   const { selected } = useTraceRoom();
   const reduce = useReducedMotion();
+  const [searchParams] = useSearchParams();
   const questions = useMemo(
     () => [
       `Why did TraceRoom ${selected?.execution.status === "BLOCKED" ? "stop" : "approve"} ${selected?.snapshot.symbol ?? "this session"}?`,
@@ -32,10 +34,26 @@ export function EvidencePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setQuestion(questions[0]);
+    const initialQuestion = questions[0] ?? "";
+    setQuestion(initialQuestion);
     setAnswer(null);
     setError(null);
-  }, [questions]);
+    if (
+      searchParams.get("ask") === "why" &&
+      selected &&
+      initialQuestion.length > 0
+    ) {
+      setLoading(true);
+      void askAuditor(selected.sessionId, initialQuestion)
+        .then(setAnswer)
+        .catch((caught: unknown) => {
+          setError(
+            caught instanceof Error ? caught.message : "Auditor search failed.",
+          );
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [questions, searchParams, selected]);
 
   async function submitQuestion() {
     if (!selected || !question.trim() || loading) return;
@@ -54,43 +72,7 @@ export function EvidencePage() {
 
   async function downloadReceipt() {
     if (!selected) return;
-    const failed = selected.evidenceValidation.agents
-      .flatMap((agent) => agent.checkedEvidence)
-      .find((claim) => claim.validationStatus !== "valid");
-    const proof = {
-      kind: "traceroom.decision-block-receipt",
-      generatedAt: new Date().toISOString(),
-      sessionId: selected.sessionId,
-      traceId: selected.signoz.traceId,
-      symbol: selected.snapshot.symbol,
-      evidence: failed ?? null,
-      gate: selected.pipelineGate,
-      execution: selected.execution,
-      stageStatuses: selected.stageStatuses,
-    };
-    const encoded = new TextEncoder().encode(JSON.stringify(proof));
-    const digest = await crypto.subtle.digest("SHA-256", encoded);
-    const checksum = Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-    const receipt = {
-      ...proof,
-      integrity: {
-        algorithm: "SHA-256",
-        digest: checksum,
-        covers: "JSON.stringify(receipt without integrity)",
-      },
-    };
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(receipt, null, 2)], {
-        type: "application/json",
-      }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `traceroom-${selected.sessionId}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    await downloadProofPack(selected.sessionId);
   }
 
   if (!selected) {
@@ -121,7 +103,7 @@ export function EvidencePage() {
             className="secondary-button"
             onClick={() => void downloadReceipt()}
           >
-            <DownloadSimple /> DOWNLOAD RECEIPT
+            <DownloadSimple /> DOWNLOAD PROOF PACK
           </button>
           <a
             className="secondary-button"
@@ -201,18 +183,20 @@ export function EvidencePage() {
                 <CheckCircle weight="fill" />{" "}
                 {answer.source === "signoz_mcp"
                   ? "VERIFIED BY SIGNOZ MCP"
-                  : "SIGNOZ MCP NOT CONFIGURED OR UNAVAILABLE — PERSISTED SESSION FALLBACK"}
+                  : "SIGNOZ MCP UNAVAILABLE - PERSISTED SESSION FALLBACK"}
               </span>
               <small>TRACE {answer.traceId}</small>
             </header>
             <h2>{answer.answer}</h2>
             <div className="evidence-matrix">
-              {answer.evidence.map((item, index) => (
+              {answer.evidence
+                .filter((item) => item.label !== "MCP result")
+                .map((item, index) => (
                 <div key={`${item.label}-${index}`}>
                   <span>{item.label}</span>
                   <strong>{item.value}</strong>
                 </div>
-              ))}
+                ))}
             </div>
           </motion.section>
         ) : (

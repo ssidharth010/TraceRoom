@@ -2,55 +2,47 @@ import {
   ArrowRight,
   CheckCircle,
   ClockCounterClockwise,
-  DiceFive,
+  Flask,
   LockKey,
   Pulse,
+  ShieldCheck,
   WarningDiamond,
   XCircle,
 } from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "motion/react";
-import { useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { configuredSnapshots } from "../../../src/config/snapshots";
+import { loadDemoReadiness } from "../api";
 import { AgentCanvas } from "../components/AgentCanvas";
 import { formatScenario, OutcomeBadge } from "../components/SessionUI";
 import { useTraceRoom } from "../TraceRoomContext";
-import type { SessionScenario } from "../types";
+import type { DemoReadiness, SessionScenario } from "../types";
 
-const scenarioActions: Array<{
+const canonicalSnapshot = configuredSnapshots[0];
+
+const labScenarios: Array<{
   scenario: SessionScenario;
   label: string;
   detail: string;
   icon: typeof CheckCircle;
 }> = [
   {
-    scenario: "healthy",
-    label: "Healthy",
-    detail: "Unmodified agent decision",
-    icon: CheckCircle,
-  },
-  {
-    scenario: "evidence-fault",
-    label: "Evidence fault",
-    detail: "Corrupted cited value",
-    icon: WarningDiamond,
-  },
-  {
     scenario: "risk-veto",
     label: "Risk veto",
-    detail: "Deterministic policy block",
+    detail: "Exercise the deterministic policy boundary",
     icon: LockKey,
   },
   {
     scenario: "error",
-    label: "Error",
-    detail: "Post-stage recording failure",
+    label: "Workflow error",
+    detail: "Record an uncontrolled stage failure",
     icon: XCircle,
   },
   {
     scenario: "deadlock",
-    label: "Deadlock",
-    detail: "Forced 1 / 1 / 1 split",
+    label: "Agent deadlock",
+    detail: "Force a split with no majority",
     icon: ClockCounterClockwise,
   },
 ];
@@ -60,154 +52,255 @@ export function HomePage() {
   const reduce = useReducedMotion();
   const { sessions, loadingScenario, runScenario, selectSession, booting } =
     useTraceRoom();
-  const [snapshotChoice, setSnapshotChoice] = useState("random");
-  const [pendingSnapshotId, setPendingSnapshotId] = useState<string | null>(
-    null,
+  const [readiness, setReadiness] = useState<DemoReadiness | null>(null);
+  const [readinessError, setReadinessError] = useState(false);
+  const [labOpen, setLabOpen] = useState(false);
+  const [labSnapshotId, setLabSnapshotId] = useState(
+    canonicalSnapshot?.snapshotId ?? "",
   );
 
   const latest = sessions[0] ?? null;
-  const chosenSnapshot = useMemo(
+  const labSnapshot = useMemo(
     () =>
       configuredSnapshots.find(
-        (snapshot) => snapshot.snapshotId === snapshotChoice,
-      ) ?? null,
-    [snapshotChoice],
+        (snapshot) => snapshot.snapshotId === labSnapshotId,
+      ) ?? canonicalSnapshot,
+    [labSnapshotId],
   );
-  const pendingSnapshot =
-    configuredSnapshots.find(
-      (snapshot) => snapshot.snapshotId === pendingSnapshotId,
-    ) ?? null;
 
-  async function run(scenario: SessionScenario) {
-    const snapshot =
-      chosenSnapshot ??
-      configuredSnapshots[
-        Math.floor(Math.random() * configuredSnapshots.length)
-      ];
-    if (!snapshot) {
-      return;
-    }
+  useEffect(() => {
+    let active = true;
+    void loadDemoReadiness()
+      .then((result) => {
+        if (active) {
+          setReadiness(result);
+          setReadinessError(false);
+        }
+      })
+      .catch(() => {
+        if (active) setReadinessError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-    setPendingSnapshotId(snapshot.snapshotId);
-    await runScenario(scenario, snapshot.snapshotId, snapshot.symbol);
-    setPendingSnapshotId(null);
+  async function run(
+    scenario: SessionScenario,
+    snapshotId = canonicalSnapshot?.snapshotId,
+    symbol = canonicalSnapshot?.symbol,
+  ) {
+    const session = await runScenario(scenario, snapshotId, symbol);
+    if (!session) return;
+    selectSession(session.sessionId);
+    navigate("/incidents");
   }
 
   function openLatestIncident() {
-    if (!latest) {
-      return;
-    }
+    if (!latest) return;
     selectSession(latest.sessionId);
     navigate("/incidents");
   }
 
+  const readinessItems = readiness
+    ? [
+        ["API", readiness.api],
+        ["LLM", readiness.llm],
+        ["SIGNOZ UI", readiness.signozUi],
+        ["SIGNOZ MCP", readiness.signozMcp],
+        ["DASHBOARD", readiness.dashboard],
+        ["ALERTS", readiness.alerts],
+        ["INFY FIXTURE", readiness.canonicalFixture],
+      ]
+    : [];
+
   return (
-    <div className="page command-page">
-      <header className="command-hero">
+    <div className="page command-page judge-mode">
+      <header className="judge-hero">
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 24 }}
+          initial={reduce ? false : { opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <span className="eyebrow">DECISION OBSERVABILITY COMMAND</span>
-          <h1>Run it. Trace it. Prove it.</h1>
+          <span className="eyebrow">DECISION EVIDENCE FIREWALL</span>
+          <h1>Watch one false claim stop an autonomous decision.</h1>
           <p>
-            Send one configured market snapshot through the autonomous agent
-            room and inspect the complete decision record in TraceRoom and
-            SigNoz.
+            TraceRoom blocks corrupted INFY evidence, then SigNoz proves where
+            the agent workflow stopped.
           </p>
+          <div className="judge-actions">
+            <button
+              className="breach-button"
+              disabled={loadingScenario !== null || !canonicalSnapshot}
+              onClick={() => void run("evidence-fault")}
+            >
+              {loadingScenario === "evidence-fault" ? (
+                <Pulse className="spin" />
+              ) : (
+                <WarningDiamond weight="fill" />
+              )}
+              <span>
+                <strong>RUN THE EVIDENCE BREACH</strong>
+                <small>INFY / 8.00% controlled corruption</small>
+              </span>
+              <ArrowRight />
+            </button>
+            <button
+              className="healthy-compare-button"
+              disabled={loadingScenario !== null || !canonicalSnapshot}
+              onClick={() => void run("healthy")}
+            >
+              <CheckCircle weight="fill" />
+              COMPARE HEALTHY RUN
+            </button>
+          </div>
         </motion.div>
-        <div className="command-state">
-          <Pulse weight="fill" />
-          <span>
-            {loadingScenario
-              ? `AGENTS DEBATING ${pendingSnapshot?.symbol ?? ""}`
-              : booting
-                ? "CONNECTING"
-                : "SYSTEM READY"}
-          </span>
-        </div>
+
+        <motion.aside
+          className="readiness-terminal"
+          initial={reduce ? false : { opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.55, delay: 0.08 }}
+          aria-live="polite"
+        >
+          <header>
+            <div>
+              <ShieldCheck weight="duotone" />
+              <span>DEMO READINESS</span>
+            </div>
+            <strong
+              className={
+                readiness?.ready ? "readiness-ready" : "readiness-attention"
+              }
+            >
+              {booting || (!readiness && !readinessError)
+                ? "CHECKING"
+                : readiness?.ready
+                  ? "ALL SYSTEMS READY"
+                  : "ATTENTION REQUIRED"}
+            </strong>
+          </header>
+          {readinessError ? (
+            <p className="readiness-error">
+              Readiness endpoint unavailable. Restart the TraceRoom API.
+            </p>
+          ) : (
+            <div className="readiness-grid">
+              {readinessItems.map(([label, status], index) => (
+                <motion.div
+                  key={label}
+                  initial={reduce ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12 + index * 0.035 }}
+                >
+                  <span>{label}</span>
+                  <strong
+                    className={
+                      status === "READY" || status === "VERIFIED"
+                        ? "status-ok"
+                        : "status-missing"
+                    }
+                  >
+                    {status}
+                  </strong>
+                </motion.div>
+              ))}
+              {!readiness && !readinessError && (
+                <div className="readiness-skeleton" aria-hidden="true" />
+              )}
+            </div>
+          )}
+        </motion.aside>
       </header>
 
-      <section className="command-console" aria-labelledby="run-heading">
-        <div className="snapshot-picker-panel">
-          <span className="console-index">01 / MARKET INPUT</span>
-          <h2 id="run-heading">Choose the evidence frame.</h2>
-          <label htmlFor="snapshot-picker">CONFIGURED SNAPSHOT</label>
-          <div className="snapshot-select-wrap">
-            <DiceFive />
-            <select
-              id="snapshot-picker"
-              value={snapshotChoice}
-              onChange={(event) => setSnapshotChoice(event.target.value)}
-              disabled={loadingScenario !== null}
+      <section className="canonical-frame" aria-label="Canonical demo contract">
+        <div>
+          <span>AUTHORITATIVE</span>
+          <strong>1684.50</strong>
+        </div>
+        <div className="canonical-transfer">
+          <span>CONTROLLED FAULT</span>
+          <strong>+8.00%</strong>
+          <ArrowRight />
+        </div>
+        <div>
+          <span>AGENT CITATION</span>
+          <strong>1819.26</strong>
+        </div>
+        <div className="canonical-gate">
+          <span>MAX TOLERANCE</span>
+          <strong>2.00%</strong>
+          <small>EVIDENCE_INTEGRITY closes the gate</small>
+        </div>
+      </section>
+
+      <section className="scenario-lab">
+        <button
+          className="scenario-lab-toggle"
+          onClick={() => setLabOpen((open) => !open)}
+          aria-expanded={labOpen}
+        >
+          <Flask />
+          <span>
+            <strong>OPEN SCENARIO LAB</strong>
+            <small>Secondary fixtures and controlled failure modes</small>
+          </span>
+          <ArrowRight className={labOpen ? "rotate-down" : ""} />
+        </button>
+        <AnimatePresence initial={false}>
+          {labOpen && (
+            <motion.div
+              className="scenario-lab-panel"
+              initial={reduce ? false : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
             >
-              <option value="random">RANDOM FIXTURE</option>
-              {configuredSnapshots.map((snapshot) => (
-                <option value={snapshot.snapshotId} key={snapshot.snapshotId}>
-                  {snapshot.symbol} / {snapshot.snapshotId}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {chosenSnapshot ? (
-            <dl className="snapshot-picker-readout">
-              <div>
-                <dt>Symbol</dt>
-                <dd>{chosenSnapshot.symbol}</dd>
-              </div>
-              <div>
-                <dt>Price</dt>
-                <dd>{chosenSnapshot.currentPrice.toFixed(2)}</dd>
-              </div>
-              <div>
-                <dt>RSI 14</dt>
-                <dd>{chosenSnapshot.indicators.rsi14.toFixed(1)}</dd>
-              </div>
-              <div>
-                <dt>Horizon</dt>
-                <dd>{chosenSnapshot.decisionHorizonMinutes}m</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="random-snapshot-copy">
-              TraceRoom will select one of {configuredSnapshots.length}{" "}
-              read-only fixtures when the run begins.
-            </p>
-          )}
-        </div>
-
-        <div className="scenario-launcher">
-          <span className="console-index">02 / REPLAY SCENARIO</span>
-          <div className="scenario-command-grid">
-            {scenarioActions.map(({ scenario, label, detail, icon: Icon }) => (
-              <button
-                key={scenario}
-                className={`scenario-command scenario-${scenario}`}
+              <label htmlFor="lab-snapshot">REPLAY FIXTURE</label>
+              <select
+                id="lab-snapshot"
+                value={labSnapshotId}
+                onChange={(event) => setLabSnapshotId(event.target.value)}
                 disabled={loadingScenario !== null}
-                onClick={() => void run(scenario)}
               >
-                <Icon weight={scenario === "healthy" ? "fill" : "regular"} />
-                <span>
-                  <strong>{label}</strong>
-                  <small>{detail}</small>
-                </span>
-                {loadingScenario === scenario ? (
-                  <Pulse className="spin" />
-                ) : (
-                  <ArrowRight />
+                {configuredSnapshots.map((snapshot) => (
+                  <option value={snapshot.snapshotId} key={snapshot.snapshotId}>
+                    {snapshot.symbol} / {snapshot.snapshotId}
+                  </option>
+                ))}
+              </select>
+              <div className="lab-action-grid">
+                {labScenarios.map(
+                  ({ scenario, label, detail, icon: Icon }) => (
+                    <button
+                      key={scenario}
+                      disabled={loadingScenario !== null || !labSnapshot}
+                      onClick={() =>
+                        void run(
+                          scenario,
+                          labSnapshot?.snapshotId,
+                          labSnapshot?.symbol,
+                        )
+                      }
+                    >
+                      <Icon />
+                      <span>
+                        <strong>{label}</strong>
+                        <small>{detail}</small>
+                      </span>
+                      <ArrowRight />
+                    </button>
+                  ),
                 )}
-              </button>
-            ))}
-          </div>
-        </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       <section className="latest-decision" aria-labelledby="latest-heading">
         <header>
           <div>
-            <span className="console-index">LATEST RECORDED DECISION</span>
+            <span className="eyebrow">LATEST RECORDED DECISION</span>
             <h2 id="latest-heading">
               {latest
                 ? `${latest.snapshot.symbol} / ${formatScenario(latest.scenario)}`
@@ -254,7 +347,7 @@ export function HomePage() {
           </div>
         ) : (
           <p className="latest-empty">
-            Choose a snapshot and run any scenario to create a decision record.
+            Run the evidence breach to create the canonical decision record.
           </p>
         )}
       </section>

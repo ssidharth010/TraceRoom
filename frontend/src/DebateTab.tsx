@@ -1,3 +1,4 @@
+import { Lightning } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import { agentName, formatStageName } from "./components/SessionUI";
 import type { CheckedEvidence, RecordedSession, StageStatus } from "./types";
@@ -29,7 +30,7 @@ export function DebateTab({ session }: { session: RecordedSession }) {
     <section className="tr-debate">
       <header className="tr-debate-header">
         <strong>
-          Debate transcript — {session.agents.length} agents ·{" "}
+          Debate transcript: {session.agents.length} agents /{" "}
           {session.evidenceValidation.validCount}/
           {session.evidenceValidation.checkedCount} claims validated
         </strong>
@@ -60,7 +61,7 @@ export function DebateTab({ session }: { session: RecordedSession }) {
             />
             <TranscriptDatum
               label="Day range"
-              value={`${formatNumber(session.snapshot.dayLow)}–${formatNumber(session.snapshot.dayHigh)}`}
+              value={`${formatNumber(session.snapshot.dayLow)}-${formatNumber(session.snapshot.dayHigh)}`}
             />
             <TranscriptDatum
               label="RSI"
@@ -71,7 +72,7 @@ export function DebateTab({ session }: { session: RecordedSession }) {
               value={formatCompactNumber(session.snapshot.volume)}
             />
             <p>
-              Shared authoritative snapshot — every cited claim below is
+              Shared authoritative snapshot. Every cited claim below is
               validated against these values.
             </p>
           </div>
@@ -89,7 +90,7 @@ export function DebateTab({ session }: { session: RecordedSession }) {
         <TimelineStage
           label="Independent Proposals"
           status={session.stageStatuses.proposals}
-          subtitle="Proposals are sealed — agents do not see each other's first answers."
+          subtitle="Proposals are sealed. Agents do not see each other's first answers."
         >
           <div className="tr-proposal-grid">
             {session.proposals.map((proposal) => (
@@ -159,13 +160,13 @@ export function DebateTab({ session }: { session: RecordedSession }) {
                   key={`${failure.agentId}-${failure.claimIndex}`}
                 >
                   <strong>
-                    {agentName(session, failure.agentId)} ·{" "}
+                    {agentName(session, failure.agentId)} /{" "}
                     {failure.claim.claimType}
                   </strong>
                   <span>
-                    Cited {formatNumber(failure.claim.citedValue)} · Reference{" "}
-                    {formatNumber(failure.claim.referenceValue)} · Deviation{" "}
-                    {formatDeviation(failure.claim.deviationPct)} ·{" "}
+                    Cited {formatNumber(failure.claim.citedValue)} / Reference{" "}
+                    {formatNumber(failure.claim.referenceValue)} / Deviation{" "}
+                    {formatDeviation(failure.claim.deviationPct)} /{" "}
                     {failure.claim.validationStatus.toUpperCase()}
                   </span>
                 </div>
@@ -391,7 +392,7 @@ export function DebateTab({ session }: { session: RecordedSession }) {
                   <strong>
                     {session.pipelineGate.reasonCode ?? "PIPELINE_BLOCKED"}
                   </strong>
-                  <h4>Evidence violation recorded — no execution permitted</h4>
+                  <h4>Evidence violation recorded. No execution permitted.</h4>
                   <p>{session.execution.reason}</p>
                 </div>
               )}
@@ -460,7 +461,7 @@ function TimelineStage({
         </header>
         {skipped && (
           <div className="tr-debate-skipped">
-            Skipped — {skippedCopy ?? "the pipeline did not reach this stage"}
+            Skipped: {skippedCopy ?? "the pipeline did not reach this stage"}
           </div>
         )}
         {(!skipped || showChildrenWhenSkipped) && children}
@@ -473,7 +474,7 @@ function InjectionEvent({ text }: { text: string }) {
   return (
     <div className="tr-debate-injection-row">
       <div className="tr-debate-rail" aria-hidden="true">
-        <span className="tr-debate-injection-node">⚡</span>
+        <span className="tr-debate-injection-node"><Lightning weight="fill" /></span>
         <span className="tr-debate-rail-line" />
       </div>
       <InjectionCallout text={text} />
@@ -484,7 +485,7 @@ function InjectionEvent({ text }: { text: string }) {
 function InjectionCallout({ text }: { text: string }) {
   return (
     <div className="tr-debate-injection">
-      <strong>⚡ CONTROLLED INJECTION</strong>
+      <strong><Lightning weight="fill" /> CONTROLLED INJECTION</strong>
       <p>{text}</p>
     </div>
   );
@@ -588,7 +589,7 @@ function evidenceInjectionText(
   const claim = session.proposals.find(
     (proposal) => proposal.agentId === override.agentId,
   )?.evidence[override.claimIndex];
-  return `${session.scenarioInjection.description} ${agentName(session, override.agentId)}'s claim ${override.claimIndex + 1} (${claim?.claimType ?? "UNKNOWN"}) was corrupted: ${formatNumber(override.originalValue)} → ${formatNumber(override.forcedValue)} — before deterministic validation.`;
+  return `${session.scenarioInjection.description} ${agentName(session, override.agentId)}'s claim ${override.claimIndex + 1} (${claim?.claimType ?? "UNKNOWN"}) was corrupted: ${formatNumber(override.originalValue)} → ${formatNumber(override.forcedValue)} before deterministic validation.`;
 }
 
 function generatedVotePosition(
@@ -634,14 +635,14 @@ function consensusSupportingLine(session: RecordedSession) {
     return "";
   }
   if (session.consensus.status === "DEADLOCKED") {
-    return "No majority position — 1/1/1 split.";
+    return "No majority position: 1/1/1 split.";
   }
 
   const forcedCount = session.scenarioInjection.voteOverrides.filter(
     (vote) => vote.overridden,
   ).length;
   return forcedCount > 0
-    ? `${session.consensus.supportingAgentIds.length}/${session.agents.length} recorded votes aligned on ${session.consensus.position} (${forcedCount} scenario-forced — see fault injection).`
+    ? `${session.consensus.supportingAgentIds.length}/${session.agents.length} recorded votes aligned on ${session.consensus.position} (${forcedCount} scenario-forced; see fault injection).`
     : `${session.consensus.supportingAgentIds.length} agents organically supported ${session.consensus.position}.`;
 }
 

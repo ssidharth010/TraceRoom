@@ -11,9 +11,10 @@
     "run:once": "tsx src/index.ts",
     "api": "tsx src/api/server.ts",
     "api:dev": "tsx watch --clear-screen=false src/api/server.ts",
+    "build": "npm --prefix frontend run build",
     "typecheck": "tsc --noEmit",
     "test": "tsx src/session/testSession.ts && tsx src/market/testSnapshot.ts",
-    "trace:test": "tsx src/telemetry/testTrace.ts"
+    "signoz:bootstrap": "node scripts/bootstrap-signoz.mjs"
   },
   "keywords": [],
   "author": "",

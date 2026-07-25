@@ -1,5 +1,6 @@
 import {
   CheckCircle,
+  Lightning,
   LockKey,
   Warning,
   WarningDiamond,
@@ -48,7 +49,7 @@ export function ControlledInjectionCard({
   return (
     <section className="fault-injection-card" aria-label="Controlled injection">
       <header>
-        <span>⚡ CONTROLLED FAULT INJECTION</span>
+        <span><Lightning weight="fill" /> CONTROLLED FAULT INJECTION</span>
         <strong>{formatScenario(injection.type)}</strong>
       </header>
       <p>{injection.description}</p>

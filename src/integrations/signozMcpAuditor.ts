@@ -39,6 +39,41 @@ interface SelectedTool {
   arguments: Record<string, unknown>;
 }
 
+export async function probeSignozMcp(): Promise<
+  "READY" | "UNAUTHORIZED" | "UNAVAILABLE"
+> {
+  try {
+    const initialized = await rawMcpRequest({
+      method: "initialize",
+      params: {
+        protocolVersion: getMcpProtocolVersion(),
+        capabilities: {},
+        clientInfo: {
+          name: "traceroom-readiness",
+          version: "0.1.0",
+        },
+      },
+      sessionId: null,
+      hasId: true,
+    });
+    await mcpNotification(
+      "notifications/initialized",
+      {},
+      initialized.sessionId,
+    );
+    const tools = await mcpRequest<{ tools?: McpTool[] }>(
+      "tools/list",
+      {},
+      initialized.sessionId,
+    );
+    return tools.tools?.length ? "READY" : "UNAVAILABLE";
+  } catch (error) {
+    return error instanceof Error && /\b401\b|authoriz/i.test(error.message)
+      ? "UNAUTHORIZED"
+      : "UNAVAILABLE";
+  }
+}
+
 export async function answerTelemetryQuestion(
   session: RecordedSession,
   question: string,
@@ -393,7 +428,7 @@ function getMcpUrl(): string {
 }
 
 function getMcpTimeoutMs(): number {
-  const configured = Number(process.env.SIGNOZ_MCP_TIMEOUT_MS ?? 2_500);
+  const configured = Number(process.env.SIGNOZ_MCP_TIMEOUT_MS ?? 10_000);
   return Number.isFinite(configured) && configured > 0 ? configured : 2_500;
 }
 
@@ -413,7 +448,7 @@ function parseMcpResponse<T>(text: string): JsonRpcResponse<T> {
 
 function summarizeMcpResult(value: unknown): string {
   const text = extractMcpText(value);
-  return text.length > 500 ? `${text.slice(0, 497)}...` : text;
+  return text.length > 2_000 ? `${text.slice(0, 1_997)}...` : text;
 }
 
 function extractMcpText(value: unknown): string {

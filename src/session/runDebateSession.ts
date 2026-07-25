@@ -10,6 +10,11 @@ import { traceEvidenceValidation } from "../evidence/traceEvidenceValidation";
 import { runEvaluationTrace } from "../evaluation/runEvaluationTrace";
 import { evaluationFixture } from "../fixtures/evaluationFixture";
 import { marketSnapshot } from "../fixtures/marketSnapshot";
+import {
+  signozAlertUrls,
+  signozDashboardUrl,
+  signozInstanceUrl,
+} from "../integrations/signozConfig";
 import { traceMarketSnapshot } from "../market/traceMarketSnapshot";
 import { traceRiskReview } from "../risk/traceRiskreview";
 import {
@@ -596,9 +601,10 @@ export async function runDebateSession(
     replay: buildReplay(debateResult, snapshot, controlledError),
     signoz: {
       traceId: debateResult.sourceSpanContext.traceId,
-      traceUrl: `${signozBaseUrl()}/trace/${debateResult.sourceSpanContext.traceId}`,
+      traceUrl: `${signozInstanceUrl()}/trace/${debateResult.sourceSpanContext.traceId}`,
       logsHint: `Search logs for traceroom.session.id="${sessionId}"`,
-      dashboardUrl: `${signozBaseUrl()}/dashboard`,
+      dashboardUrl: signozDashboardUrl(),
+      alertUrls: signozAlertUrls(),
     },
   };
 }
@@ -898,8 +904,4 @@ function formatVoteOverrides(voteScenario: ControlledVoteScenario): string {
         `${vote.agentId} ${vote.originalPosition}->${vote.forcedPosition}`,
     )
     .join(", ");
-}
-
-function signozBaseUrl(): string {
-  return process.env.SIGNOZ_BASE_URL ?? "http://localhost:8080";
 }

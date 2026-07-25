@@ -2,7 +2,7 @@ import { runDebateSession } from "./session/runDebateSession";
 import { resolveSessionScenario } from "./scenarios/runScenario";
 import { telemetrySdk } from "./telemetry/tracing";
 
-console.log("TraceRoom ACME debate session starting...");
+console.log("TraceRoom INFY debate session starting...");
 
 try {
   const session = await runDebateSession(resolveSessionScenario());

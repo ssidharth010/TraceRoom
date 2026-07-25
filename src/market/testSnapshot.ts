@@ -109,12 +109,12 @@ delete process.env.TWELVE_DATA_API_KEY;
 delete process.env.OPENAI_API_KEY;
 
 const fallback = await createSnapshotCandidate({
-  symbol: "ACME",
-  exchange: "US",
+  symbol: "INFY",
+  exchange: "NSE",
 });
 assert.equal(fallback.status, "FIXTURE_FALLBACK");
 assert.equal(fallback.snapshot?.snapshotId, "snapshot-001");
-assert.equal(fallback.snapshot?.currentPrice, 104.5);
+assert.equal(fallback.snapshot?.currentPrice, 1684.5);
 assert.equal(fallback.canLock, true);
 
 const blocked = await createSnapshotCandidate({
@@ -170,7 +170,7 @@ const canonicalFault = applyControlledEvidenceFault(
 );
 assert.equal(canonicalFault.faultInjected, true);
 if (canonicalFault.faultInjected) {
-  assert.equal(canonicalFault.tamperedValue, 112.86);
+  assert.equal(canonicalFault.tamperedValue, 1819.26);
 }
 
 const numericSnapshotBeforeResearch = JSON.stringify(mapped.snapshot);

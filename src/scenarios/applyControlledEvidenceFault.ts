@@ -60,7 +60,7 @@ export function applyControlledEvidenceFault(
     );
   }
 
-  const symbol = reference?.symbol ?? "ACME";
+  const symbol = reference?.symbol ?? "INFY";
   const originalValue = reference?.currentPrice ?? targetClaim.citedValue;
   const tamperedValue = Number((originalValue * 1.08).toFixed(2));
 

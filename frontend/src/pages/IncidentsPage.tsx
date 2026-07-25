@@ -13,6 +13,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DebateTab } from "../DebateTab";
+import { DecisionVerdict } from "../components/DecisionVerdict";
 import {
   agentName,
   ControlledInjectionCard,
@@ -26,6 +27,12 @@ import type { RecordedSession } from "../types";
 export function IncidentsPage() {
   const { sessions, selected, selectSession } = useTraceRoom();
   const reduce = useReducedMotion();
+
+  useEffect(() => {
+    if (!selected && sessions[0]) {
+      selectSession(sessions[0].sessionId);
+    }
+  }, [selectSession, selected, sessions]);
 
   return (
     <div className="page incidents-page">
@@ -129,7 +136,7 @@ function IncidentDetail({ session }: { session: RecordedSession }) {
           </div>
           <h2>{session.snapshot.symbol} decision record</h2>
           <p>
-            Captured {new Date(session.createdAt).toLocaleString()} · Session{" "}
+            Captured {new Date(session.createdAt).toLocaleString()} / Session{" "}
             {session.sessionId}
           </p>
         </div>
@@ -141,6 +148,8 @@ function IncidentDetail({ session }: { session: RecordedSession }) {
           {sessionCopied ? "COPIED" : "COPY SESSION ID"}
         </button>
       </header>
+
+      <DecisionVerdict session={session} />
 
       <section className="incident-section" aria-labelledby="replay-heading">
         <SectionHeading
@@ -181,7 +190,7 @@ function IncidentDetail({ session }: { session: RecordedSession }) {
                   <div>
                     <strong>{agentName(session, proposal.agentId)}</strong>
                     <span>
-                      {agentPersona(session, proposal.agentId)} ·{" "}
+                      {agentPersona(session, proposal.agentId)} /{" "}
                       {Math.round(proposal.confidence * 100)}%
                     </span>
                   </div>
@@ -225,7 +234,7 @@ function IncidentDetail({ session }: { session: RecordedSession }) {
         </div>
         {session.stageStatuses.finalVote === "SKIPPED" && (
           <div className="stage-skipped-callout">
-            Final voting was skipped — pipeline blocked at{" "}
+            Final voting was skipped. Pipeline blocked at{" "}
             {formatStageName(
               session.pipelineGate.blockedAt ?? "evidence validation",
             )}
@@ -261,7 +270,7 @@ function IncidentDetail({ session }: { session: RecordedSession }) {
               <strong>{status}</strong>
               {status === "SKIPPED" && (
                 <small>
-                  Skipped —{" "}
+                  Skipped:{" "}
                   {session.pipelineGate.status === "BLOCKED"
                     ? `pipeline blocked at ${formatStageName(session.pipelineGate.blockedAt ?? "evidence validation")}`
                     : "the workflow did not reach this stage"}

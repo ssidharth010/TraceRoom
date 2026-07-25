@@ -7,11 +7,14 @@ import {
   configuredSnapshots,
   getConfiguredSnapshot,
 } from "../config/snapshots";
+import { getDemoReadiness } from "../demo/readiness";
 import { answerTelemetryQuestion } from "../integrations/signozMcpAuditor";
+import { verifySessionTelemetry } from "../integrations/verifySessionTelemetry";
 import { createSnapshotCandidate } from "../market/snapshotService";
 import type { SnapshotExchange } from "../market/snapshotTypes";
 import { SessionStore } from "../persistence/sessionStore";
 import { SnapshotStore } from "../persistence/snapshotStore";
+import { buildProofPack } from "../proof/buildProofPack";
 import { resolveSessionScenario } from "../scenarios/runScenario";
 import { runDebateSession } from "../session/runDebateSession";
 import { telemetrySdk } from "../telemetry/tracing";
@@ -80,6 +83,23 @@ async function route(
     return;
   }
 
+  if (request.method === "GET" && pathname === "/demo/readiness") {
+    sendJson(response, 200, await getDemoReadiness());
+    return;
+  }
+
+  if (
+    request.method === "POST" &&
+    pathname === "/signoz/alerts/webhook"
+  ) {
+    const payload = await readJsonBody(request);
+    console.log(
+      `SigNoz alert webhook received: ${JSON.stringify(payload).slice(0, 1_000)}`,
+    );
+    sendJson(response, 202, { accepted: true });
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/sessions/run") {
     const body = await readJsonBody(request);
     const bodyRecord =
@@ -134,6 +154,39 @@ async function route(
       return;
     }
     sendJson(response, 200, session);
+    return;
+  }
+
+  const proofPackMatch = pathname.match(
+    /^\/sessions\/([^/]+)\/proof-pack$/,
+  );
+  if (request.method === "GET" && proofPackMatch) {
+    const session = store.get(decodeURIComponent(proofPackMatch[1]));
+    if (!session) {
+      sendJson(response, 404, { error: "Session not found" });
+      return;
+    }
+    const verifyMcp = requestUrl.searchParams.get("verifyMcp") !== "false";
+    const mcpAnswer = verifyMcp
+      ? await answerTelemetryQuestion(
+          session,
+          "Why was execution blocked and which evidence failed?",
+        )
+      : null;
+    sendJson(response, 200, buildProofPack(session, mcpAnswer));
+    return;
+  }
+
+  const verificationMatch = pathname.match(
+    /^\/sessions\/([^/]+)\/verification$/,
+  );
+  if (request.method === "GET" && verificationMatch) {
+    const session = store.get(decodeURIComponent(verificationMatch[1]));
+    if (!session) {
+      sendJson(response, 404, { error: "Session not found" });
+      return;
+    }
+    sendJson(response, 200, await verifySessionTelemetry(session));
     return;
   }
 

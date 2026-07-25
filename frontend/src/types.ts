@@ -187,7 +187,29 @@ export interface RecordedSession {
     traceUrl: string;
     logsHint: string;
     dashboardUrl: string;
+    alertUrls?: string[];
   };
+}
+
+export interface DemoReadiness {
+  ready: boolean;
+  checkedAt: string;
+  api: "READY" | "UNAVAILABLE";
+  llm: "READY" | "UNAVAILABLE";
+  signozUi: "READY" | "UNAVAILABLE";
+  signozMcp: "READY" | "UNAUTHORIZED" | "UNAVAILABLE";
+  dashboard: "VERIFIED" | "UNVERIFIED";
+  alerts: "VERIFIED" | "UNVERIFIED";
+  canonicalFixture: "VERIFIED" | "INVALID";
+}
+
+export interface SessionTelemetryVerification {
+  checkedAt: string;
+  traceVerified: boolean;
+  logCorrelated: boolean;
+  dashboardUpdated: boolean;
+  alertFiring: boolean;
+  mcpVerified: boolean;
 }
 
 export interface TelemetryQuestionAnswer {

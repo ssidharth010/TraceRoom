@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   configuredSnapshots,
@@ -8,6 +9,14 @@ import { resolveConsensus } from "../debate/resolveConsensus";
 import { validateEvidence } from "../evidence/validateEvidence";
 import { marketSnapshot } from "../fixtures/marketSnapshot";
 import { answerTelemetryQuestion } from "../integrations/signozMcpAuditor";
+import {
+  hasVerifiedAlertUrls,
+  hasVerifiedDashboardUrl,
+  signozAlertUrls,
+  signozDashboardUrl,
+} from "../integrations/signozConfig";
+import { toSessionTelemetryVerification } from "../integrations/verifySessionTelemetry";
+import { buildProofPack } from "../proof/buildProofPack";
 import { evaluateRisk } from "../risk/evaluationRisk";
 import { applyControlledEvidenceFault } from "../scenarios/applyControlledEvidenceFault";
 import { applyControlledVoteScenario } from "../scenarios/applyControlledVoteScenario";
@@ -24,7 +33,29 @@ import type { RecordedSession } from "./types";
 
 assert.equal(configuredSnapshots.length, 4);
 assert.equal(configuredSnapshots[0]?.snapshotId, "snapshot-001");
-assert.equal(configuredSnapshots[0]?.symbol, "ACME");
+assert.equal(configuredSnapshots[0]?.symbol, "INFY");
+assert.equal(configuredSnapshots[0]?.currentPrice, 1684.5);
+
+const originalDashboardUrl = process.env.SIGNOZ_DASHBOARD_URL;
+const originalAlertUrls = process.env.SIGNOZ_ALERT_URLS;
+process.env.SIGNOZ_DASHBOARD_URL =
+  "http://localhost:8080/dashboard/submission-evidence-id";
+process.env.SIGNOZ_ALERT_URLS = [
+  "http://localhost:8080/alerts/overview?ruleId=evidence",
+  "http://localhost:8080/alerts/overview?ruleId=failure",
+  "http://localhost:8080/alerts/overview?ruleId=cost",
+].join(",");
+assert.equal(
+  signozDashboardUrl(),
+  "http://localhost:8080/dashboard/submission-evidence-id",
+);
+assert.equal(hasVerifiedDashboardUrl(), true);
+assert.equal(signozAlertUrls().length, 3);
+assert.equal(hasVerifiedAlertUrls(), true);
+if (originalDashboardUrl === undefined) delete process.env.SIGNOZ_DASHBOARD_URL;
+else process.env.SIGNOZ_DASHBOARD_URL = originalDashboardUrl;
+if (originalAlertUrls === undefined) delete process.env.SIGNOZ_ALERT_URLS;
+else process.env.SIGNOZ_ALERT_URLS = originalAlertUrls;
 assert.equal(getConfiguredSnapshot("snapshot-003")?.symbol, "ORBT");
 assert.equal(getConfiguredSnapshot("missing-snapshot"), null);
 
@@ -35,13 +66,13 @@ const proposals: AgentProposal[] = ["agent-1", "agent-2", "agent-3"].map(
     position: "LONG",
     confidence: 0.7,
     thesis:
-      "ACME has snapshot-grounded momentum suitable for this replay test.",
+      "INFY has snapshot-grounded momentum suitable for this replay test.",
     evidence: [
       {
         sourceId: `market.quote:${marketSnapshot.symbol}`,
         claimType: "CURRENT_PRICE",
         citedValue: marketSnapshot.currentPrice,
-        statement: "The current ACME price matches the shared replay snapshot.",
+        statement: "The current INFY price matches the shared replay snapshot.",
       },
     ],
     risks: [],
@@ -57,12 +88,23 @@ assert.equal(healthyEvidence.invalidCount, 0);
 
 const fault = applyControlledEvidenceFault(proposals, EVIDENCE_FAULT_ENV_VALUE);
 assert.equal(fault.faultInjected, true);
+if (fault.faultInjected) {
+  assert.equal(fault.originalValue, 1684.5);
+  assert.equal(fault.tamperedValue, 1819.26);
+}
 const faultyEvidence = validateEvidence(
   marketSnapshot,
   fault.proposals.flatMap((proposal) => proposal.evidence),
 );
 assert.equal(faultyEvidence.validationStatus, "price_deviation");
 assert.equal(faultyEvidence.invalidCount, 1);
+assert.equal(faultyEvidence.tolerancePct, 2);
+assert.equal(faultyEvidence.checkedEvidence[0]?.referenceValue, 1684.5);
+assert.equal(faultyEvidence.checkedEvidence[0]?.citedValue, 1819.26);
+assert.equal(
+  faultyEvidence.checkedEvidence[0]?.deviationPct.toFixed(2),
+  "8.00",
+);
 
 const finalVotes: FinalVote[] = proposals.map((proposal) => ({
   agentId: proposal.agentId,
@@ -83,11 +125,11 @@ const finalVotes: FinalVote[] = proposals.map((proposal) => ({
     },
   ],
   revisedThesis:
-    "ACME remains a snapshot-grounded LONG after cross-examination.",
+    "INFY remains a snapshot-grounded LONG after cross-examination.",
   position: "LONG",
   confidence: 0.7,
   supportedProposalAgentId: proposal.agentId,
-  rationale: "The shared ACME snapshot supports the final LONG vote.",
+  rationale: "The shared INFY snapshot supports the final LONG vote.",
 }));
 
 const consensus = resolveConsensus(finalVotes);
@@ -178,9 +220,30 @@ process.env.SIGNOZ_MCP_URL = "http://127.0.0.1:1/mcp";
 process.env.SIGNOZ_MCP_TIMEOUT_MS = "100";
 const auditorFixture = {
   sessionId: "auditor-evidence-fault",
-  snapshot: {
-    symbol: "ACME",
+  scenario: "evidence-fault",
+  scenarioInjection: {
+    evidenceOverride: {
+      originalValue: 1684.5,
+      forcedValue: 1819.26,
+    },
   },
+  snapshot: {
+    snapshotId: "snapshot-001",
+    symbol: "INFY",
+    currentPrice: 1684.5,
+  },
+  stageStatuses: {
+    marketSnapshot: "COMPLETED",
+    proposals: "COMPLETED",
+    evidenceValidation: "BLOCKED",
+    crossExamination: "SKIPPED",
+    finalVote: "SKIPPED",
+    consensus: "SKIPPED",
+    riskReview: "SKIPPED",
+    evaluation: "SKIPPED",
+  },
+  agents: [],
+  proposals: [],
   consensus: null,
   pipelineGate: {
     status: "BLOCKED",
@@ -197,8 +260,8 @@ const auditorFixture = {
         tolerancePct: 2,
         checkedEvidence: [
           {
-            citedValue: 112.86,
-            referenceValue: 104.5,
+            citedValue: 1819.26,
+            referenceValue: 1684.5,
             deviationPct: 8,
             validationStatus: "price_deviation",
           },
@@ -224,12 +287,67 @@ const auditorFallback = await answerTelemetryQuestion(
   "Why was execution blocked?",
 );
 assert.equal(auditorFallback.source, "session_fallback");
-assert.match(auditorFallback.answer, /112\.86/);
-assert.match(auditorFallback.answer, /104\.50/);
+assert.match(auditorFallback.answer, /1819\.26/);
+assert.match(auditorFallback.answer, /1684\.50/);
 assert.match(auditorFallback.answer, /8\.00%/);
 assert.match(auditorFallback.answer, /2\.00%/);
 assert.match(auditorFallback.answer, /EVIDENCE_INTEGRITY/);
 assert.match(auditorFallback.answer, /BLOCKED/);
+const fallbackVerification = toSessionTelemetryVerification(
+  auditorFixture,
+  {
+    trace: auditorFallback,
+    logs: auditorFallback,
+    dashboard: auditorFallback,
+    alert: auditorFallback,
+  },
+);
+assert.equal(fallbackVerification.mcpVerified, false);
+assert.equal(fallbackVerification.traceVerified, false);
+
+const liveAnswer = (value: string) => ({
+  source: "signoz_mcp" as const,
+  answer: "Verified.",
+  traceId: auditorFixture.signoz.traceId,
+  signozLinks: auditorFixture.signoz,
+  evidence: [{ label: "MCP result", value }],
+});
+const inactiveAlertVerification = toSessionTelemetryVerification(
+  auditorFixture,
+  {
+    trace: liveAnswer(auditorFixture.signoz.traceId),
+    logs: liveAnswer(auditorFixture.sessionId),
+    dashboard: liveAnswer("TraceRoom / Submission Evidence"),
+    alert: liveAnswer(
+      '{"alert":"TraceRoom / Evidence Integrity Block","state":"inactive","searchContext":"Were any alerts firing?"}',
+    ),
+  },
+);
+assert.equal(inactiveAlertVerification.alertFiring, false);
+const firingAlertVerification = toSessionTelemetryVerification(
+  auditorFixture,
+  {
+    trace: liveAnswer(auditorFixture.signoz.traceId),
+    logs: liveAnswer(auditorFixture.sessionId),
+    dashboard: liveAnswer("TraceRoom / Submission Evidence"),
+    alert: liveAnswer(
+      '{"alert":"TraceRoom / Evidence Integrity Block","state":"firing"}',
+    ),
+  },
+);
+assert.equal(firingAlertVerification.alertFiring, true);
+
+const proofPack = buildProofPack(auditorFixture, auditorFallback);
+assert.equal(proofPack.kind, "traceroom.decision-proof-pack");
+assert.equal(proofPack.snapshot.symbol, "INFY");
+assert.equal(proofPack.evidence.injected, 1819.26);
+assert.equal(proofPack.integrity.algorithm, "SHA-256");
+assert.match(proofPack.integrity.digest, /^[a-f0-9]{64}$/);
+const { integrity: proofIntegrity, ...proofPayload } = proofPack;
+assert.equal(
+  proofIntegrity.digest,
+  createHash("sha256").update(JSON.stringify(proofPayload)).digest("hex"),
+);
 
 const mcpMethods: string[] = [];
 const mockMcpServer = createServer((request, response) => {
