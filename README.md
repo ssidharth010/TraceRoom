@@ -19,8 +19,8 @@ Agents recommend → consensus selects → risk governs → TraceRoom proves
 
 > **Video / GIF slot**
 >
-> Suggested recording: run a healthy session, replay the decision, then run the
-> INFY evidence fault and open its SigNoz trace. Target length: 60–90 seconds.
+> Record the judge-focused TraceRoom and SigNoz walkthrough in
+> [`script.md`](script.md). Target length: 2:20; hard limit: 2:30.
 
 ![TraceRoom command center](docs/assets/traceroom-command.png)
 
@@ -179,11 +179,9 @@ Default local endpoints:
 | SigNoz MCP | `http://localhost:8000/mcp` |
 | OTLP/HTTP collector | `http://127.0.0.1:4318` |
 
-Dashboard queries, alert definitions, MCP authentication notes, and the
-27-span healthy trace map are in
-[SigNoz setup](docs/SIGNOZ_SETUP.md). The locked INFY proof IDs and capture
-checklist are in
-[submission evidence](docs/SIGNOZ_SUBMISSION_EVIDENCE.md).
+Dashboard queries, alert definitions, MCP authentication notes, the 27-span
+healthy trace map, and the pre-recording verification checklist are in
+[SigNoz setup](docs/SIGNOZ_SETUP.md).
 
 ## Verify
 
@@ -220,8 +218,8 @@ docs/             durable SigNoz setup and submission proof
   scope.
 - The MCP auditor falls back to the persisted session when SigNoz MCP is
   unavailable and labels that fallback explicitly.
-- Dashboard, alert, and MCP claims remain unverified until their authenticated
-  URLs and screenshots are captured in the evidence manifest.
+- Dashboard, alert, and MCP results must be visibly authenticated before they
+  are described as live.
 
 ## AI assistance disclosure
 

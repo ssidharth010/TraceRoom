@@ -124,8 +124,17 @@ The controlled evidence and controlled workflow scenarios are deliberately
 excluded from the uncontrolled-failure rule. They remain visible in the
 scenario and evidence panels.
 
-## Evidence Capture
+## Demo Verification
 
-After running a fresh INFY evidence fault, update
-`docs/SIGNOZ_SUBMISSION_EVIDENCE.md`. Do not claim a dashboard, alert, or MCP
-result until its URL and screenshot have been captured.
+Before recording:
+
+- Run a fresh INFY evidence fault and open its `debate.session` trace.
+- Confirm `pipeline.block_reason=EVIDENCE_INTEGRITY` on the root span.
+- Search correlated logs using the recorded `traceroom.session.id`.
+- Confirm the **TraceRoom / Submission Evidence** dashboard includes the run.
+- Confirm **TraceRoom / Evidence Integrity Block** is firing.
+- Ask the MCP Auditor why execution was blocked and confirm the result is
+  labeled **Verified by SigNoz MCP**.
+
+Do not describe a dashboard, alert, or MCP result as live unless it is visible
+and authenticated during the final pre-recording check.
