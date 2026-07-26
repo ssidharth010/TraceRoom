@@ -12,8 +12,7 @@
     "api": "tsx src/api/server.ts",
     "api:dev": "tsx watch --clear-screen=false src/api/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/session/testSession.ts && tsx src/market/testSnapshot.ts",
-    "trace:test": "tsx src/telemetry/testTrace.ts"
+    "test": "tsx src/session/testSession.ts && tsx src/market/testSnapshot.ts"
   },
   "keywords": [],
   "author": "",

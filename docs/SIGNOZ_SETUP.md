@@ -126,6 +126,6 @@ scenario and evidence panels.
 
 ## Evidence Capture
 
-After running a fresh ACME evidence fault, fill in
+After running a fresh INFY evidence fault, update
 `docs/SIGNOZ_SUBMISSION_EVIDENCE.md`. Do not claim a dashboard, alert, or MCP
 result until its URL and screenshot have been captured.
